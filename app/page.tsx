@@ -1,103 +1,176 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import ChatBox from "@/components/ChatBox";
+import Sidebar from "@/components/Sidebar";
+import { Message, ChatSession } from "@/types";
+import { askGroq } from "@/lib/groq";
+import { loadSessions, saveSessions } from "@/lib/storage";
+import { v4 as uuidv4 } from "uuid";
+
+export default function Page() {
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  useEffect(() => {
+    const saved = loadSessions();
+    setSessions(saved);
+    if (saved.length > 0) {
+      setSelectedSessionId(saved[0].id);
+    }
+  }, []);
+
+  const getCurrentSession = () =>
+    sessions.find((s) => s.id === selectedSessionId);
+
+  const handleSend = async (text: string) => {
+    if (!selectedSessionId) return;
+
+    const updatedSessions = sessions.map((session) => {
+      if (session.id === selectedSessionId) {
+        const updatedMessages = [
+          ...session.messages,
+          { type: "user" as const, text },
+        ];
+        return { ...session, messages: updatedMessages };
+      }
+      return session;
+    });
+
+    setSessions(updatedSessions);
+    saveSessions(updatedSessions);
+    setIsLoading(true);
+
+    try {
+      const reply = await askGroq(text);
+
+      const updatedWithAI = updatedSessions.map((session) => {
+        if (session.id === selectedSessionId) {
+          const updatedMessages = [
+            ...session.messages,
+            { type: "ai" as const, text: reply },
+          ];
+          return { ...session, messages: updatedMessages };
+        }
+        return session;
+      });
+
+      setSessions(updatedWithAI);
+      saveSessions(updatedWithAI);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateSession = () => {
+    const newSession: ChatSession = {
+      id: uuidv4(),
+      name: "New Chat",
+      messages: [],
+    };
+    const updated = [newSession, ...sessions];
+    setSessions(updated);
+    setSelectedSessionId(newSession.id);
+    saveSessions(updated);
+  };
+
+  const handleDeleteSession = (id: string) => {
+    const updated = sessions.filter((s) => s.id !== id);
+    setSessions(updated);
+    saveSessions(updated);
+    if (selectedSessionId === id) {
+      setSelectedSessionId(updated.length > 0 ? updated[0].id : null);
+    }
+  };
+
+  const handleRenameSession = (id: string, name: string) => {
+    const updated = sessions.map((s) => (s.id === id ? { ...s, name } : s));
+    setSessions(updated);
+    saveSessions(updated);
+  };
+  const handleEditMessage = (index: number, newText: string) => {
+    if (!selectedSessionId) return;
+
+    const updated = sessions.map((session) => {
+      if (session.id === selectedSessionId) {
+        const updatedMessages = [...session.messages];
+        if (updatedMessages[index].type === "user") {
+          updatedMessages[index] = { ...updatedMessages[index], text: newText };
+        }
+        return { ...session, messages: updatedMessages };
+      }
+      return session;
+    });
+
+    setSessions(updated);
+    saveSessions(updated);
+  };
+
+  const onEdit = async (index: number, newText: string) => {
+    const updatedMessages = [...messages];
+    updatedMessages[index] = { text: newText, type: "user" };
+    updatedMessages.splice(index + 1); // Remove semua respons AI setelah edit
+
+    // Hapus respons AI setelah pesan user itu (jika ada)
+    if (updatedMessages[index + 1]?.type === "ai") {
+      updatedMessages.splice(index + 1, 1);
+    }
+
+    setMessages(updatedMessages);
+    setIsLoading(true);
+    const response = await askGroq(newText); // kirim ulang ke AI
+    setMessages((prev) => [...prev, { type: "ai", text: response }]);
+    setIsLoading(false);
+  };
+
+  const currentSession = getCurrentSession();
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <div className="flex h-screen w-full bg-neutral-950 text-white overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-[260px] h-full overflow-y-auto border-r border-neutral-800 bg-neutral-900 shrink-0">
+        <Sidebar
+          sessions={sessions}
+          activeSessionId={selectedSessionId || ""}
+          onSelect={(id) => setSelectedSessionId(id)}
+          onCreate={handleCreateSession}
+          onDelete={handleDeleteSession}
+          onRename={handleRenameSession}
         />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+      </aside>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+      {/* Chat Area */}
+      <main className="flex-1 h-full w-full overflow-y-auto">
+        {currentSession ? (
+          <ChatBox
+            messages={currentSession?.messages ?? []}
+            setMessages={(newMsgsOrFn) => {
+              const currentMessages =
+                typeof newMsgsOrFn === "function"
+                  ? newMsgsOrFn(currentSession?.messages ?? [])
+                  : newMsgsOrFn;
+
+              const updatedSessions = sessions.map((session) =>
+                session.id === selectedSessionId
+                  ? { ...session, messages: currentMessages }
+                  : session
+              );
+              setSessions(updatedSessions);
+              saveSessions(updatedSessions);
+            }}
+            onSend={handleSend}
+            isLoading={isLoading}
+            onEdit={onEdit}
+          />
+        ) : (
+          <div className="flex-1 h-full overflow-y-auto">
+            No session selected.
+          </div>
+        )}
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
