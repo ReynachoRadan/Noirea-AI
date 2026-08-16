@@ -12,5 +12,9 @@ export function loadSessions(): ChatSession[] {
 }
 
 export function saveSessions(sessions: ChatSession[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+  } catch {
+    console.error("Failed to save sessions");
+  }
 }
