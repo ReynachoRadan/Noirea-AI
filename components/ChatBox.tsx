@@ -3,15 +3,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Message } from "@/types";
-import { Button } from "@/components/UI/Button";
-import { TextArea } from "@/components/UI/TextArea";
-import { Spinner } from "@/components/UI/Spinner";
+import { Button } from "@/components/ui/Button";
+import { TextArea } from "@/components/ui/TextArea";
+import { Spinner } from "@/components/ui/Spinner";
 import { motion } from "framer-motion";
 import { SendHorizonal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import clsx from "clsx";
-import CodeBlock from "./CodeBlock";
 import { Copy, Pencil, Save } from "lucide-react";
 
 type ChatBoxProps = {
