@@ -1,5 +1,7 @@
 import { ChatSession } from "@/types";
 import { Trash2, MessageSquare } from "lucide-react";
+import Link from "next/link";
+import { Shirt } from "lucide-react";
 
 type SidebarProps = {
   sessions: ChatSession[];
@@ -22,10 +24,19 @@ export default function Sidebar({
       <button
         onClick={onCreate}
         className="relative overflow-hidden w-full py-2 px-4 bg-black text-white font-semibold rounded-lg transition 
-             hover:bg-gradient-to-r hover:from-black hover:to-gray-800 hover:ring-1 hover:ring-gray-300 shimmer-effect">
+             hover:bg-gradient-to-r hover:from-black hover:to-gray-800 hover:ring-1 hover:ring-gray-300 shimmer-effect"
+      >
         + New Chat
       </button>
 
+      <Link
+        href="/wardrobe"
+        className="flex items-center gap-2 py-2 px-4 rounded-lg text-sm font-medium text-gray-700 border border-gray-200 hover:bg-gray-100 transition"
+      >
+        <Shirt size={16} /> Wardrobe
+      </Link>
+
+      <div className="flex flex-col gap-3"></div>
       <div className="flex flex-col gap-3">
         {sessions.map((s) => (
           <div
