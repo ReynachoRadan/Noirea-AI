@@ -11,10 +11,9 @@ import { v4 as uuidv4 } from "uuid";
 export default function Page() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
-    null
+    null,
   );
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
   useEffect(() => {
     const saved = loadSessions();
     setSessions(saved);
@@ -91,39 +90,37 @@ export default function Page() {
     setSessions(updated);
     saveSessions(updated);
   };
-  const handleEditMessage = (index: number, newText: string) => {
+  const handleEditMessage = async (index: number, newText: string) => {
     if (!selectedSessionId) return;
 
-    const updated = sessions.map((session) => {
-      if (session.id === selectedSessionId) {
-        const updatedMessages = [...session.messages];
-        if (updatedMessages[index].type === "user") {
-          updatedMessages[index] = { ...updatedMessages[index], text: newText };
-        }
-        return { ...session, messages: updatedMessages };
-      }
-      return session;
-    });
+    const session = sessions.find((s) => s.id === selectedSessionId);
+    if (!session) return;
 
-    setSessions(updated);
-    saveSessions(updated);
-  };
+    // Update teks pesan yang diedit, buang semua pesan setelahnya (termasuk respons AI lama)
+    const trimmedMessages = session.messages.slice(0, index + 1);
+    trimmedMessages[index] = { ...trimmedMessages[index], text: newText };
 
-  const onEdit = async (index: number, newText: string) => {
-    const updatedMessages = [...messages];
-    updatedMessages[index] = { text: newText, type: "user" };
-    updatedMessages.splice(index + 1); // Remove semua respons AI setelah edit
-
-    // Hapus respons AI setelah pesan user itu (jika ada)
-    if (updatedMessages[index + 1]?.type === "ai") {
-      updatedMessages.splice(index + 1, 1);
-    }
-
-    setMessages(updatedMessages);
+    const updatedSessions = sessions.map((s) =>
+      s.id === selectedSessionId ? { ...s, messages: trimmedMessages } : s,
+    );
+    setSessions(updatedSessions);
+    saveSessions(updatedSessions);
     setIsLoading(true);
-    const response = await askGroq(newText); // kirim ulang ke AI
-    setMessages((prev) => [...prev, { type: "ai", text: response }]);
-    setIsLoading(false);
+
+    try {
+      const reply = await askGroq(newText);
+      const finalMessages = [
+        ...trimmedMessages,
+        { type: "ai" as const, text: reply },
+      ];
+      const finalSessions = updatedSessions.map((s) =>
+        s.id === selectedSessionId ? { ...s, messages: finalMessages } : s,
+      );
+      setSessions(finalSessions);
+      saveSessions(finalSessions);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const currentSession = getCurrentSession();
@@ -156,14 +153,14 @@ export default function Page() {
               const updatedSessions = sessions.map((session) =>
                 session.id === selectedSessionId
                   ? { ...session, messages: currentMessages }
-                  : session
+                  : session,
               );
               setSessions(updatedSessions);
               saveSessions(updatedSessions);
             }}
             onSend={handleSend}
             isLoading={isLoading}
-            onEdit={onEdit}
+            onEdit={handleEditMessage}
           />
         ) : (
           <div className="flex-1 h-full overflow-y-auto">

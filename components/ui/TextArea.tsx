@@ -1,4 +1,4 @@
-// components/UI/TextArea.tsx
+// components/ui/TextArea.tsx
 import { TextareaHTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils"; // asumsi kamu pakai tailwind merge/classnames helper
 

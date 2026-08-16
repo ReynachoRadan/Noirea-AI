@@ -3,15 +3,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Message } from "@/types";
-import { Button } from "@/components/UI/Button";
-import { TextArea } from "@/components/UI/TextArea";
-import { Spinner } from "@/components/UI/Spinner";
+import { Button } from "@/components/ui/Button";
+import { TextArea } from "@/components/ui/TextArea";
+import { Spinner } from "@/components/ui/Spinner";
 import { motion } from "framer-motion";
 import { SendHorizonal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import clsx from "clsx";
-import CodeBlock from "./CodeBlock";
 import { Copy, Pencil, Save } from "lucide-react";
 
 type ChatBoxProps = {
@@ -95,7 +94,7 @@ export default function ChatBox({
                 transition={{ duration: 0.2 }}
                 className={clsx(
                   "w-full",
-                  isUser ? "flex justify-end" : "flex justify-start"
+                  isUser ? "flex justify-end" : "flex justify-start",
                 )}
               >
                 {isUser && (
@@ -108,16 +107,10 @@ export default function ChatBox({
                           className="w-full bg-neutral-700 text-white p-2 rounded resize-none"
                         />
                         <button
-                          onClick={() => handleCopy(msg.text)}
+                          onClick={handleSaveEdit}
                           className="p-1 rounded hover:bg-white/10 transition"
                         >
-                          <Copy className="w-4 h-4 text-gray-400 hover:text-white" />
-                        </button>
-                        <button
-                          onClick={() => handleStartEdit(index, msg.text)}
-                          className="p-1 rounded hover:bg-white/10 transition"
-                        >
-                          <Pencil className="w-4 h-4 text-gray-400 hover:text-white" />
+                          <Save className="w-4 h-4 text-gray-400 hover:text-white" />
                         </button>
                       </div>
                     ) : (
@@ -149,7 +142,14 @@ export default function ChatBox({
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        code: CodeBlock,
+                        code: ({ children, ...props }) => (
+                          <code
+                            className="bg-neutral-200 dark:bg-neutral-800 rounded px-1 py-0.5 text-sm"
+                            {...props}
+                          >
+                            {children}
+                          </code>
+                        ),
                         p: ({ children }) => (
                           <p className="mb-3 leading-relaxed">{children}</p>
                         ),

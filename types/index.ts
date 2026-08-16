@@ -1,10 +1,4 @@
-export type Message = {
-  type: "user" | "ai";
-  text: string;
-};
-
-export type ChatSession = {
-  id: string;
-  name: string;
-  messages: Message[];
-};
+export * from "./chat";
+export * from "./wardrobe";
+export * from "./outfit";
+export * from "./ai";
