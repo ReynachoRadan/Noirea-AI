@@ -1,7 +1,9 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { ChatSession } from "@/types";
-import { Trash2, MessageSquare } from "lucide-react";
+import { Trash2, MessageSquare, Shirt } from "lucide-react";
 import Link from "next/link";
-import { Shirt } from "lucide-react";
 
 type SidebarProps = {
   sessions: ChatSession[];
@@ -11,6 +13,40 @@ type SidebarProps = {
   onDelete: (id: string) => void;
   onRename: (id: string, name: string) => void;
 };
+
+function SessionNameInput({
+  session,
+  onRename,
+}: {
+  session: ChatSession;
+  onRename: (id: string, name: string) => void;
+}) {
+  const [localName, setLocalName] = useState(session.name);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalName(session.name);
+    }
+  }, [session.name, isFocused]);
+
+  return (
+    <input
+      value={localName}
+      onChange={(e) => setLocalName(e.target.value)}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => {
+        setIsFocused(false);
+        if (localName.trim() && localName !== session.name) {
+          onRename(session.id, localName.trim());
+        }
+      }}
+      className="bg-transparent text-sm font-medium w-full outline-none text-black placeholder:text-gray-400"
+      placeholder="Untitled"
+    />
+  );
+}
+
 export default function Sidebar({
   sessions,
   activeSessionId,
@@ -36,7 +72,6 @@ export default function Sidebar({
         <Shirt size={16} /> Wardrobe
       </Link>
 
-      <div className="flex flex-col gap-3"></div>
       <div className="flex flex-col gap-3">
         {sessions.map((s) => (
           <div
@@ -48,12 +83,7 @@ export default function Sidebar({
                   : "bg-white border-gray-200 hover:bg-gray-100"
               }`}
           >
-            <input
-              value={s.name}
-              onChange={(e) => onRename(s.id, e.target.value)}
-              className="bg-transparent text-sm font-medium w-full outline-none text-black placeholder:text-gray-400"
-              placeholder="Untitled"
-            />
+            <SessionNameInput session={s} onRename={onRename} />
 
             <div className="flex justify-between items-center text-sm text-gray-500 mt-2">
               <button
