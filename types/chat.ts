@@ -1,4 +1,5 @@
 export type Message = {
+  id?: string;
   type: "user" | "ai";
   text: string;
 };
