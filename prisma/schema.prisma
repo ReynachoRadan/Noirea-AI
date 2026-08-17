@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ClothingCategory {
+  top
+  bottom
+  outerwear
+  shoes
+  accessory
+}
+
+model WardrobeItem {
+  id        String           @id @default(uuid())
+  userId    String           @default("local-user")
+  name      String
+  category  ClothingCategory
+  color     String
+  imageUrl  String?
+  tags      String[]         @default([])
+  createdAt DateTime         @default(now())
+
+  @@map("wardrobe_items")
+}

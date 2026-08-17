@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { WardrobeItem, ClothingCategory } from "@/types";
-import { loadWardrobe, saveWardrobe } from "@/lib/storage";
 import WardrobeCard from "@/components/wardrobe/wardrobecard";
-import { v4 as uuidv4 } from "uuid";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
@@ -18,42 +16,66 @@ const CATEGORIES: ClothingCategory[] = [
 
 export default function WardrobePage() {
   const [items, setItems] = useState<WardrobeItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [name, setName] = useState("");
   const [category, setCategory] = useState<ClothingCategory>("top");
   const [color, setColor] = useState("");
   const [imageUrl, setImageUrl] = useState("");
 
+  const fetchItems = async () => {
+    try {
+      const res = await fetch("/api/wardrobe");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setItems(data);
+    } catch (error) {
+      console.error("Failed to load wardrobe items:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setItems(loadWardrobe());
+    fetchItems();
   }, []);
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !color.trim()) return;
 
-    const newItem: WardrobeItem = {
-      id: uuidv4(),
-      userId: "local-user",
-      name: name.trim(),
-      category,
-      color: color.trim(),
-      imageUrl: imageUrl.trim(),
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const res = await fetch("/api/wardrobe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          category,
+          color: color.trim(),
+          imageUrl: imageUrl.trim(),
+        }),
+      });
 
-    const updated = [newItem, ...items];
-    setItems(updated);
-    saveWardrobe(updated);
+      if (!res.ok) throw new Error("Failed to add item");
 
-    setName("");
-    setColor("");
-    setImageUrl("");
+      const newItem = await res.json();
+      setItems((prev) => [newItem, ...prev]);
+
+      setName("");
+      setColor("");
+      setImageUrl("");
+    } catch (error) {
+      console.error("Failed to add wardrobe item:", error);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    const updated = items.filter((item) => item.id !== id);
-    setItems(updated);
-    saveWardrobe(updated);
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/wardrobe/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete item");
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error("Failed to delete wardrobe item:", error);
+    }
   };
 
   return (
@@ -110,7 +132,9 @@ export default function WardrobePage() {
       </form>
 
       {/* Grid */}
-      {items.length === 0 ? (
+      {isLoading ? (
+        <p className="text-neutral-500 text-sm">Memuat wardrobe...</p>
+      ) : items.length === 0 ? (
         <p className="text-neutral-500 text-sm">Belum ada item wardrobe.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
