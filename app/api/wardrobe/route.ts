@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/auth/get-user";
 
 export async function GET() {
+  const { user, errorResponse } = await getAuthenticatedUser();
+  if (!user) return errorResponse;
+
   try {
     const items = await prisma.wardrobeItem.findMany({
-      where: { userId: "local-user" },
+      where: { userId: user.id },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(items);
@@ -18,6 +22,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const { user, errorResponse } = await getAuthenticatedUser();
+  if (!user) return errorResponse;
+
   try {
     const body = await req.json();
     const { name, category, color, imageUrl } = body;
@@ -31,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     const item = await prisma.wardrobeItem.create({
       data: {
-        userId: "local-user",
+        userId: user.id,
         name,
         category,
         color,

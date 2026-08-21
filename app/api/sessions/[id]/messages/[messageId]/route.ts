@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { callGroq } from "@/lib/groq-server";
+import { getAuthenticatedUser } from "@/lib/auth/get-user";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; messageId: string }> }
 ) {
+  const { user, errorResponse } = await getAuthenticatedUser();
+  if (!user) return errorResponse;
+
   try {
     const { id: sessionId, messageId } = await params;
     const { text } = await req.json();
@@ -15,6 +19,14 @@ export async function PATCH(
         { error: "Missing or invalid 'text'" },
         { status: 400 }
       );
+    }
+
+    // Pastikan session ini milik user yang login
+    const session = await prisma.chatSession.findFirst({
+      where: { id: sessionId, userId: user.id },
+    });
+    if (!session) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
     const allMessages = await prisma.message.findMany({

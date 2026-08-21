@@ -48,6 +48,23 @@ export default function ChatBox({
     setText("");
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!text.trim()) return;
+
+      if (editingIndex !== null) {
+        onEdit(editingIndex, text.trim());
+        setEditingIndex(null);
+        setEditedText("");
+      } else {
+        onSend(text.trim());
+      }
+
+      setText("");
+    }
+  };
+
   const handleStartEdit = (index: number, text: string) => {
     setEditingIndex(index);
     setEditedText(text);
@@ -194,6 +211,7 @@ export default function ChatBox({
             e.target.style.height = "auto";
             e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
           }}
+          onKeyDown={handleKeyDown}
           style={{ maxHeight: "120px" }}
           className="flex-1 bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 dark:placeholder:text-neutral-400 border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-2 text-sm resize-none focus:outline-none"
         />

@@ -16,7 +16,7 @@ enum ClothingCategory {
 
 model WardrobeItem {
   id        String           @id @default(uuid())
-  userId    String           @default("local-user")
+  userId    String           @db.Uuid
   name      String
   category  ClothingCategory
   color     String
@@ -34,7 +34,7 @@ enum MessageType {
 
 model ChatSession {
   id        String    @id @default(uuid())
-  userId    String    @default("local-user")
+  userId    String    @db.Uuid
   name      String
   messages  Message[]
   createdAt DateTime  @default(now())

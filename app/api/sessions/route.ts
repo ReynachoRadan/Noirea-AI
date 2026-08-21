@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/auth/get-user";
 
 export async function GET() {
+  const { user, errorResponse } = await getAuthenticatedUser();
+  if (!user) return errorResponse;
+
   try {
     const sessions = await prisma.chatSession.findMany({
-      where: { userId: "local-user" },
+      where: { userId: user.id },
       include: { messages: { orderBy: { createdAt: "asc" } } },
       orderBy: { createdAt: "desc" },
     });
@@ -19,10 +23,13 @@ export async function GET() {
 }
 
 export async function POST() {
+  const { user, errorResponse } = await getAuthenticatedUser();
+  if (!user) return errorResponse;
+
   try {
     const session = await prisma.chatSession.create({
       data: {
-        userId: "local-user",
+        userId: user.id,
         name: "New Chat",
       },
       include: { messages: true },

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callGroq } from "@/lib/groq-server";
+import { getAuthenticatedUser } from "@/lib/auth/get-user";
 
 export async function POST(req: NextRequest) {
+  const { user, errorResponse } = await getAuthenticatedUser();
+  if (!user) return errorResponse;
+
   const { prompt } = await req.json();
 
   if (!prompt || typeof prompt !== "string") {
