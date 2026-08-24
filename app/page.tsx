@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import ChatBox from "@/components/ChatBox";
 import Sidebar from "@/components/Sidebar";
-import { Message, ChatSession } from "@/types";
+import { ChatSession, Message } from "@/types";
+import { useEffect, useState } from "react";
 
 export default function Page() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -81,7 +81,11 @@ export default function Page() {
                 ...s,
                 messages: [
                   ...s.messages,
-                  { type: "ai" as const, text: aiMessage.text },
+                  {
+                    type: "ai" as const,
+                    text: aiMessage.text,
+                    recommendation: aiMessage.recommendation,
+                  },
                 ],
               }
             : s,
@@ -178,7 +182,11 @@ export default function Page() {
                 ...s,
                 messages: [
                   ...trimmedMessages,
-                  { type: "ai" as const, text: aiMessage.text },
+                  {
+                    type: "ai" as const,
+                    text: aiMessage.text,
+                    recommendation: aiMessage.recommendation,
+                  },
                 ],
               }
             : s,
@@ -207,23 +215,25 @@ export default function Page() {
       </aside>
 
       <main className="flex-1 h-full w-full overflow-y-auto">
-        {isFetching ? (
-          <div className="flex items-center justify-center h-full text-neutral-500 text-sm">
-            Memuat percakapan...
-          </div>
-        ) : currentSession ? (
-          <ChatBox
-            messages={currentSession?.messages ?? []}
-            setMessages={() => {}}
-            onSend={handleSend}
-            isLoading={isLoading}
-            onEdit={handleEditMessage}
-          />
-        ) : (
-          <div className="flex-1 h-full overflow-y-auto flex items-center justify-center text-neutral-500 text-sm">
-            No session selected.
-          </div>
-        )}
+        <div className="min-h-full">
+          {isFetching ? (
+            <div className="flex items-center justify-center h-full text-neutral-500 text-sm">
+              Memuat percakapan...
+            </div>
+          ) : currentSession ? (
+            <ChatBox
+              messages={currentSession?.messages ?? []}
+              setMessages={() => {}}
+              onSend={handleSend}
+              isLoading={isLoading}
+              onEdit={handleEditMessage}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-neutral-500 text-sm">
+              No session selected.
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );

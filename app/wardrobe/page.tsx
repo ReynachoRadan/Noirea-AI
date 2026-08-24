@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { WardrobeItem, ClothingCategory } from "@/types";
 import WardrobeCard from "@/components/wardrobe/wardrobecard";
-import Link from "next/link";
+import { ClothingCategory, WardrobeItem } from "@/types";
 import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const CATEGORIES: ClothingCategory[] = [
   "top",
@@ -24,7 +24,7 @@ export default function WardrobePage() {
 
   const fetchItems = async () => {
     try {
-      const res = await fetch("/api/wardrobe");
+      const res = await fetch("/api/wardrobe", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setItems(data);
@@ -47,6 +47,7 @@ export default function WardrobePage() {
       const res = await fetch("/api/wardrobe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({
           name: name.trim(),
           category,
@@ -57,8 +58,7 @@ export default function WardrobePage() {
 
       if (!res.ok) throw new Error("Failed to add item");
 
-      const newItem = await res.json();
-      setItems((prev) => [newItem, ...prev]);
+      await fetchItems();
 
       setName("");
       setColor("");
