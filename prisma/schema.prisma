@@ -27,6 +27,19 @@ model WardrobeItem {
   @@map("wardrobe_items")
 }
 
+model SavedOutfit {
+  id        String   @id @default(uuid())
+  userId    String   @db.Uuid
+  name      String
+  summary   String
+  reasoning String?
+  itemIds   String[] @default([])
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("saved_outfits")
+}
+
 enum MessageType {
   user
   ai

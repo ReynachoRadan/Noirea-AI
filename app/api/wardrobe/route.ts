@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth/get-user";
+import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
   const { user, errorResponse } = await getAuthenticatedUser();
@@ -16,7 +16,7 @@ export async function GET() {
     console.error("Failed to fetch wardrobe items:", error);
     return NextResponse.json(
       { error: "Failed to fetch wardrobe items" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -28,11 +28,20 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { name, category, color, imageUrl } = body;
+    const normalizedImageUrl =
+      typeof imageUrl === "string" ? imageUrl.trim() : "";
 
     if (!name || !category || !color) {
       return NextResponse.json(
         { error: "Missing required fields: name, category, color" },
-        { status: 400 }
+        { status: 400 },
+      );
+    }
+
+    if (normalizedImageUrl.length > 8_000_000) {
+      return NextResponse.json(
+        { error: "Ukuran gambar terlalu besar. Maksimal 5 MB." },
+        { status: 400 },
       );
     }
 
@@ -42,7 +51,7 @@ export async function POST(req: NextRequest) {
         name,
         category,
         color,
-        imageUrl: imageUrl || null,
+        imageUrl: normalizedImageUrl || null,
       },
     });
 
@@ -51,7 +60,7 @@ export async function POST(req: NextRequest) {
     console.error("Failed to create wardrobe item:", error);
     return NextResponse.json(
       { error: "Failed to create wardrobe item" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

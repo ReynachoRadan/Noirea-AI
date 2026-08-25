@@ -46,6 +46,7 @@ export default function ChatBox({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedText, setEditedText] = useState("");
   const [savedOutfits, setSavedOutfits] = useState<Set<string>>(new Set());
+  const [savingOutfit, setSavingOutfit] = useState<string | null>(null);
   const [welcomeIndex, setWelcomeIndex] = useState(0);
   const [typedWelcome, setTypedWelcome] = useState("");
 
@@ -129,16 +130,32 @@ export default function ChatBox({
     };
   }, [isEmpty, welcomeIndex]);
 
-  const toggleSaveOutfit = (messageKey: string) => {
-    setSavedOutfits((prev) => {
-      const next = new Set(prev);
-      if (next.has(messageKey)) {
-        next.delete(messageKey);
-      } else {
-        next.add(messageKey);
-      }
-      return next;
-    });
+  const saveOutfit = async (
+    messageKey: string,
+    recommendation: NonNullable<Message["recommendation"]>,
+  ) => {
+    if (savedOutfits.has(messageKey) || savingOutfit === messageKey) return;
+
+    setSavingOutfit(messageKey);
+    try {
+      const response = await fetch("/api/saved-outfits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: recommendation.summary,
+          summary: recommendation.summary,
+          reasoning: recommendation.reasoning,
+          itemIds: recommendation.items.map((item) => item.id),
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to save outfit");
+      setSavedOutfits((prev) => new Set(prev).add(messageKey));
+    } catch (error) {
+      console.error("Failed to save outfit:", error);
+    } finally {
+      setSavingOutfit(null);
+    }
   };
 
   useEffect(() => {
@@ -282,7 +299,13 @@ export default function ChatBox({
 
                           <button
                             type="button"
-                            onClick={() => toggleSaveOutfit(`outfit-${index}`)}
+                            onClick={() =>
+                              saveOutfit(`outfit-${index}`, msg.recommendation!)
+                            }
+                            disabled={
+                              savedOutfits.has(`outfit-${index}`) ||
+                              savingOutfit === `outfit-${index}`
+                            }
                             className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium text-neutral-200 transition hover:border-amber-300/50 hover:text-white"
                           >
                             {savedOutfits.has(`outfit-${index}`) ? (
@@ -293,7 +316,9 @@ export default function ChatBox({
                             ) : (
                               <>
                                 <Bookmark className="h-3.5 w-3.5" />
-                                Save outfit
+                                {savingOutfit === `outfit-${index}`
+                                  ? "Saving..."
+                                  : "Save outfit"}
                               </>
                             )}
                           </button>
