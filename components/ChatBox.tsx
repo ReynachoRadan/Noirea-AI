@@ -47,6 +47,8 @@ export default function ChatBox({
   const [savingOutfit, setSavingOutfit] = useState<string | null>(null);
   const [welcomeIndex, setWelcomeIndex] = useState(0);
   const [typedWelcome, setTypedWelcome] = useState("");
+  const [profileName, setProfileName] = useState("");
+  const [isProfileLoaded, setIsProfileLoaded] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,9 +98,21 @@ export default function ChatBox({
   const isEmpty = messages.length === 0;
 
   useEffect(() => {
-    if (!isEmpty) return;
+    fetch("/api/profile", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((profile) => {
+        if (profile?.displayName) setProfileName(profile.displayName);
+      })
+      .catch(() => undefined)
+      .finally(() => setIsProfileLoaded(true));
+  }, []);
 
-    const currentPhrase = welcomeMessages[welcomeIndex];
+  useEffect(() => {
+    if (!isEmpty || !isProfileLoaded) return;
+
+    const currentPhrase = profileName
+      ? `Hi ${profileName}, ${welcomeMessages[welcomeIndex]}`
+      : welcomeMessages[welcomeIndex];
     let charIndex = 0;
     setTypedWelcome("");
 
@@ -122,7 +136,7 @@ export default function ChatBox({
       clearInterval(intervalId);
       clearTimeout(timeoutId);
     };
-  }, [isEmpty, welcomeIndex]);
+  }, [isEmpty, isProfileLoaded, profileName, welcomeIndex]);
 
   const saveOutfit = async (
     messageKey: string,

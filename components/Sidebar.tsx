@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ChatSession } from "@/types";
-import { Trash2, MessageSquare, Shirt } from "lucide-react";
-import Link from "next/link";
 import UserMenu from "@/components/usermenu";
+import { ChatSession } from "@/types";
+import { MessageSquare, Shirt, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 type SidebarProps = {
   sessions: ChatSession[];

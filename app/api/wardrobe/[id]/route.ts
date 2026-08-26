@@ -1,5 +1,10 @@
 import { getAuthenticatedUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma";
+import {
+  removeWardrobeImage,
+  storeWardrobeImage,
+  WardrobeStorageError,
+} from "@/lib/supabase/storage";
 import { NextRequest, NextResponse } from "next/server";
 
 const CATEGORIES = [
@@ -48,18 +53,34 @@ export async function PATCH(
       );
     }
 
+    const currentItem = await prisma.wardrobeItem.findFirst({
+      where: { id, userId: user.id },
+    });
+    if (!currentItem) {
+      return NextResponse.json({ error: "Item not found" }, { status: 404 });
+    }
+
+    const storedImageUrl = await storeWardrobeImage(
+      user.id,
+      normalizedImageUrl,
+    );
+
     const result = await prisma.wardrobeItem.updateMany({
       where: { id, userId: user.id },
       data: {
         name: name.trim(),
         category,
         color: color.trim(),
-        imageUrl: normalizedImageUrl || null,
+        imageUrl: storedImageUrl,
       },
     });
 
     if (result.count === 0) {
       return NextResponse.json({ error: "Item not found" }, { status: 404 });
+    }
+
+    if (currentItem.imageUrl && currentItem.imageUrl !== storedImageUrl) {
+      await removeWardrobeImage(currentItem.imageUrl);
     }
 
     const item = await prisma.wardrobeItem.findFirst({
@@ -69,6 +90,15 @@ export async function PATCH(
     return NextResponse.json(item);
   } catch (error) {
     console.error("Failed to update wardrobe item:", error);
+    if (error instanceof WardrobeStorageError) {
+      return NextResponse.json(
+        {
+          error:
+            "Penyimpanan gambar belum dikonfigurasi. Buat bucket Supabase Storage bernama wardrobe-images terlebih dahulu.",
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(
       { error: "Failed to update wardrobe item" },
       { status: 500 },
@@ -86,6 +116,13 @@ export async function DELETE(
   try {
     const { id } = await params;
 
+    const item = await prisma.wardrobeItem.findFirst({
+      where: { id, userId: user.id },
+    });
+    if (!item) {
+      return NextResponse.json({ error: "Item not found" }, { status: 404 });
+    }
+
     const result = await prisma.wardrobeItem.deleteMany({
       where: { id, userId: user.id },
     });
@@ -93,6 +130,8 @@ export async function DELETE(
     if (result.count === 0) {
       return NextResponse.json({ error: "Item not found" }, { status: 404 });
     }
+
+    await removeWardrobeImage(item.imageUrl);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -50,16 +50,17 @@ describe("wardrobe ownership", () => {
   });
 
   it("cannot delete another user's wardrobe item", async () => {
-    prisma.wardrobeItem.deleteMany.mockResolvedValue({ count: 0 });
+    prisma.wardrobeItem.findFirst.mockResolvedValue(null);
 
     const response = await DELETE(new NextRequest("http://localhost"), {
       params: Promise.resolve({ id: "item-b" }),
     });
 
     expect(response.status).toBe(404);
-    expect(prisma.wardrobeItem.deleteMany).toHaveBeenCalledWith({
+    expect(prisma.wardrobeItem.findFirst).toHaveBeenCalledWith({
       where: { id: "item-b", userId: "user-a" },
     });
+    expect(prisma.wardrobeItem.deleteMany).not.toHaveBeenCalled();
   });
 
   it("updates only an item owned by the authenticated user", async () => {

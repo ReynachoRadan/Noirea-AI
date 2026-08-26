@@ -2,7 +2,7 @@
 
 AI-powered personal wardrobe and outfit recommendation platform.
 
-> 🚧 **Status: In active development.** Chat, authentication, database-backed wardrobe management, AI outfit recommendation, wardrobe image analysis, and saved outfits are functional. Supabase Storage, automated tests, and deployment remain planned.
+> 🚧 **Status as of 2026-08-27:** Core chat, authentication, wardrobe management, AI recommendations, image analysis, saved outfits, Supabase Storage, and personalized profiles are implemented and validated. Mix & Match and production deployment remain next.
 
 ---
 
@@ -31,13 +31,12 @@ NOIRÉA lets users log their own wardrobe items and asks an AI stylist for outfi
 - Structured outfit recommendations from `/api/recommend`, with item ID validation
 - Wardrobe image upload and AI classification of item name, category, and color
 - Saved outfits with item ownership validation and delete support
+- Personal style profile with AI response language preference
+- Personalized chat welcome, name usage, and language-aware AI responses
 
 **Planned:**
 
-- Personal style profile
 - Mix & Match tool
-- Supabase Storage for durable image uploads
-- Automated API and UI testing
 - Production deployment
 
 ## Architecture
@@ -49,6 +48,7 @@ app/
 │   ├── recommend/      → structured wardrobe-grounded recommendations
 │   ├── sessions/       → database-backed chat sessions and messages
 │   ├── wardrobe/       → wardrobe CRUD and image analysis
+│   ├── profile/        → personal style profile
 │   └── saved-outfits/  → saved outfit CRUD
 ├── wardrobe/            → wardrobe management page
 ├── layout.tsx
@@ -58,18 +58,21 @@ components/
 ├── ui/                    → shared design system (Button, Card, Spinner, TextArea)
 ├── wardrobe/            → wardrobe-specific components
 ├── ChatBox.tsx
-└── Sidebar.tsx
+├── Sidebar.tsx
+└── usermenu.tsx          → profile settings and logout menu
 
 lib/
 ├── groq.ts               → client-side caller to /api/chat
 ├── ask.ts
-└── utils.ts
+├── utils.ts
+└── supabase/storage.ts   → wardrobe image upload and cleanup
 
 types/
 ├── chat.ts                → Message, ChatSession
 ├── wardrobe.ts          → WardrobeItem, ClothingCategory
 ├── outfit.ts               → Outfit, OutfitWithItems
 ├── ai.ts                    → StyleRequest, StyleRecommendation
+├── profile.ts               → style profile and language options
 └── index.ts               → barrel export
 ```
 
@@ -79,10 +82,9 @@ The Groq API key lives only on the server (`lib/groq-server.ts`). The client nev
 
 - **Framework:** Next.js (App Router) + TypeScript
 - **Styling:** Tailwind CSS
-- **AI:** Groq API (`llama-3.1-8b-instant`)
-- **Persistence (current):** browser `localStorage`
-- **Persistence (planned):** PostgreSQL + Prisma
-- **Auth:** not yet implemented
+- **AI:** Groq API (text and vision models configured in `lib/groq-server.ts`)
+- **Persistence:** PostgreSQL + Prisma, with images in Supabase Storage
+- **Auth:** Supabase authentication
 
 ## AI Pipeline
 
@@ -102,15 +104,15 @@ Groq JSON response → validate item IDs against user's wardrobe
 Visual outfit recommendation → optionally save to SavedOutfit
 ```
 
-**Current image analysis:**
+**Current image flow:**
 
 ```
 Browser file → data URL → `/api/wardrobe/analyze` → Groq vision model
         ↓
-User reviews generated fields → wardrobe item saved in PostgreSQL
+User reviews generated fields → upload to Supabase Storage → public URL in PostgreSQL
 ```
 
-The current image flow is an interim implementation. Files are sent as data URLs and stored in the wardrobe record; Supabase Storage is still required for a production-ready upload flow.
+The data URL is used only for the short-lived analysis request. New wardrobe images are uploaded to the `wardrobe-images` bucket and the database stores only their public URL. Existing external image URLs remain supported.
 
 ## Database
 
@@ -146,22 +148,41 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
+Create a public Storage bucket named `wardrobe-images`, then add these policies in the Supabase SQL editor:
+
+```sql
+insert into storage.buckets (id, name, public)
+values ('wardrobe-images', 'wardrobe-images', true)
+on conflict (id) do update set public = true;
+
+create policy "Users can upload wardrobe images"
+on storage.objects for insert to authenticated
+with check (bucket_id = 'wardrobe-images' and (storage.foldername(name))[1] = (select auth.uid()::text));
+
+create policy "Users can delete wardrobe images"
+on storage.objects for delete to authenticated
+using (bucket_id = 'wardrobe-images' and (storage.foldername(name))[1] = (select auth.uid()::text));
+```
+
 > The key is server-side only (no `NEXT_PUBLIC_` prefix) — it is never exposed to the browser. Get a key from the [Groq Console](https://console.groq.com/keys).
 
-## Testing
+## Testing And Current Status
 
 Current verification combines automated API tests, build checks, and manual feature testing:
 
 - `npm test` runs the ownership and authentication route tests
-- `npx tsc --noEmit` and `npm run build` pass
+- `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass
 - Chat send/receive, session management, and message editing work end-to-end
 - Authenticated wardrobe and saved outfit data is scoped to the signed-in user
 - AI recommendation item IDs are restricted to the user's wardrobe
 - API key is not exposed to the browser
+- Vision parsing handles footwear, category aliases, model preambles, placeholders, and color-only output
+- Vision calls retry once after a temporary Groq rate limit
+- Profile settings are stored in Supabase Auth metadata and applied to chat prompts
 
 The authenticated browser flow (login → add wardrobe item → analyze image → recommend outfit → save outfit → delete outfit) still requires manual verification with a configured Supabase account.
 
-Automated testing (unit/integration) is planned once the data layer (database) stabilizes.
+Automated API testing is active. Browser end-to-end testing remains manual for now.
 
 ## Deployment
 
@@ -183,12 +204,12 @@ Not yet deployed. A future target is Vercel with Supabase PostgreSQL, Supabase S
 - [x] Database integration (PostgreSQL + Prisma)
 - [x] Authentication
 - [x] AI outfit recommendation grounded in wardrobe data
-- [x] Wardrobe image upload + AI classification (interim data URL flow)
+- [x] Wardrobe image upload + AI classification
 - [x] Saved looks
-- [ ] Supabase Storage image uploads
-- [ ] Personal style profile
+- [x] Supabase Storage image uploads
+- [x] Personal style profile
 - [ ] Mix & Match tool
-- [ ] Automated testing
+- [x] Automated API testing
 - [ ] Production deployment
 
 ## Screenshots

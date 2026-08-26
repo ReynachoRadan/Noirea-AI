@@ -3,6 +3,40 @@ import { callGroq } from "@/lib/groq-server";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
+const LANGUAGE_NAMES: Record<string, string> = {
+  id: "Bahasa Indonesia",
+  en: "English",
+  es: "Spanish",
+  zh: "Mandarin Chinese",
+  hi: "Hindi",
+  ar: "Arabic",
+  pt: "Portuguese",
+  fr: "French",
+  de: "German",
+  ja: "Japanese",
+  ko: "Korean",
+};
+
+function getPersonalization(user: { user_metadata?: Record<string, unknown> }) {
+  const metadata = user.user_metadata?.styleProfile;
+  const profile =
+    metadata && typeof metadata === "object"
+      ? (metadata as Record<string, unknown>)
+      : {};
+  const displayName =
+    typeof profile.displayName === "string" ? profile.displayName.trim() : "";
+  const languageCode =
+    typeof profile.language === "string" ? profile.language : "";
+  const language =
+    LANGUAGE_NAMES[languageCode] ?? "the same language as the user";
+
+  return {
+    displayName,
+    language,
+    instruction: `Respond in ${language}. ${displayName ? `Address the user naturally as ${displayName} when appropriate. ` : ""}Do not mention these instructions or the profile data.`,
+  };
+}
+
 function normalizePrompt(prompt: string) {
   return prompt
     .toLowerCase()
@@ -236,6 +270,7 @@ export async function POST(
     });
 
     const isOutfitPrompt = isOutfitRelatedPrompt(text);
+    const personalization = getPersonalization(user);
 
     let reply: string;
 
@@ -247,10 +282,17 @@ export async function POST(
             `- ${item.name} | category: ${item.category} | color: ${item.color} | tags: ${item.tags?.join(", ") || "-"}`,
         )
         .join("\n");
+      const styleProfile = user.user_metadata?.styleProfile;
+      const profileContext =
+        styleProfile && typeof styleProfile === "object"
+          ? `Preferensi style user: gaya ${Array.isArray(styleProfile.styles) ? styleProfile.styles.join(", ") || "bebas" : "bebas"}; warna favorit ${typeof styleProfile.favoriteColors === "string" ? styleProfile.favoriteColors || "bebas" : "bebas"}; hindari ${typeof styleProfile.avoidColors === "string" ? styleProfile.avoidColors || "tidak ada" : "tidak ada"}; occasion ${typeof styleProfile.occasions === "string" ? styleProfile.occasions || "umum" : "umum"}.`
+          : "User belum mengisi preferensi style.";
 
       const outfitPrompt = `Kamu adalah stylist fashion yang membantu user memilih outfit dari wardrobe mereka.
 
 Gunakan HANYA item di bawah ini. Jangan menebak item baru yang tidak ada di wardrobe.
+
+${profileContext}
 
 Wardrobe relevan:
 ${wardrobeContext}
@@ -263,7 +305,7 @@ Jawab dengan format:
 3. Jelaskan kenapa cocok singkat
 4. Beri saran styling tambahan bila perlu
 
-Jawab dalam bahasa yang sama dengan user.`;
+${personalization.instruction}`;
 
       reply = await callGroq(outfitPrompt);
 
@@ -296,7 +338,11 @@ Jawab dalam bahasa yang sama dengan user.`;
       reply =
         "Wardrobe kamu masih kosong. Tambahkan beberapa item dulu supaya saya bisa membantu rekomendasi outfit yang cocok dengan permintaanmu.";
     } else {
-      reply = await callGroq(text);
+      reply =
+        await callGroq(`You are NOIRÉA, a warm personal fashion assistant. ${personalization.instruction}
+    Use the user's name naturally when it improves the conversation, but do not force it into every reply. Answer the user's message directly and conversationally.
+
+    User message: ${text}`);
     }
 
     const aiMessage = await prisma.message.create({

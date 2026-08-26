@@ -1,5 +1,9 @@
 import { getAuthenticatedUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma";
+import {
+  storeWardrobeImage,
+  WardrobeStorageError,
+} from "@/lib/supabase/storage";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
@@ -45,19 +49,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const storedImageUrl = await storeWardrobeImage(
+      user.id,
+      normalizedImageUrl,
+    );
+
     const item = await prisma.wardrobeItem.create({
       data: {
         userId: user.id,
         name,
         category,
         color,
-        imageUrl: normalizedImageUrl || null,
+        imageUrl: storedImageUrl,
       },
     });
 
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
     console.error("Failed to create wardrobe item:", error);
+    if (error instanceof WardrobeStorageError) {
+      return NextResponse.json(
+        {
+          error:
+            "Penyimpanan gambar belum dikonfigurasi. Buat bucket Supabase Storage bernama wardrobe-images terlebih dahulu.",
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(
       { error: "Failed to create wardrobe item" },
       { status: 500 },
