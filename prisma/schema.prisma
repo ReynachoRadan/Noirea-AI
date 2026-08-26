@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ClothingCategory {
+  top
+  bottom
+  outerwear
+  shoes
+  accessory
+}
+
+model WardrobeItem {
+  id        String           @id @default(uuid())
+  userId    String           @db.Uuid
+  name      String
+  category  ClothingCategory
+  color     String
+  imageUrl  String?
+  tags      String[]         @default([])
+  createdAt DateTime         @default(now())
+
+  @@map("wardrobe_items")
+}
+
+model SavedOutfit {
+  id        String   @id @default(uuid())
+  userId    String   @db.Uuid
+  name      String
+  summary   String
+  reasoning String?
+  itemIds   String[] @default([])
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("saved_outfits")
+}
+
+enum MessageType {
+  user
+  ai
+}
+
+model ChatSession {
+  id        String    @id @default(uuid())
+  userId    String    @db.Uuid
+  name      String
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("chat_sessions")
+}
+
+model Message {
+  id        String      @id @default(uuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type      MessageType
+  text      String
+  createdAt DateTime    @default(now())
+
+  @@map("messages")
+}
