@@ -74,6 +74,7 @@ export async function callGroqVisionStructured(
   systemPrompt: string,
   userPrompt: string,
   imageDataUrl: string,
+  retryCount = 0,
 ): Promise<string> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("Groq API key is not defined on server");
@@ -97,9 +98,27 @@ export async function callGroqVisionStructured(
         },
       ],
       temperature: 0.2,
-      max_tokens: 300,
+      max_tokens: 180,
     }),
   });
+
+  if (response.status === 429 && retryCount === 0) {
+    const retryAfter = Number(response.headers.get("retry-after"));
+    const waitMs = Math.min(
+      15_000,
+      Math.max(
+        1_000,
+        Number.isFinite(retryAfter) ? retryAfter * 1_000 : 10_000,
+      ),
+    );
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    return callGroqVisionStructured(
+      systemPrompt,
+      userPrompt,
+      imageDataUrl,
+      retryCount + 1,
+    );
+  }
 
   if (!response.ok) {
     const error = await response.text();

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,12 +29,19 @@ export default function LoginPage() {
         router.push("/");
         router.refresh();
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
         if (error) throw error;
-        setError("Cek email kamu untuk konfirmasi akun.");
+        if (data.session) {
+          router.push("/profile");
+          router.refresh();
+        } else {
+          setError(
+            "Cek email kamu untuk konfirmasi akun, lalu masuk untuk mengatur profil.",
+          );
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");

@@ -3,6 +3,20 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
+const LANGUAGE_NAMES: Record<string, string> = {
+  id: "Bahasa Indonesia",
+  en: "English",
+  es: "Spanish",
+  zh: "Mandarin Chinese",
+  hi: "Hindi",
+  ar: "Arabic",
+  pt: "Portuguese",
+  fr: "French",
+  de: "German",
+  ja: "Japanese",
+  ko: "Korean",
+};
+
 type WardrobeItemLike = {
   id: string;
   name: string;
@@ -127,6 +141,21 @@ export async function POST(req: NextRequest) {
     }
 
     const candidateItems = pickBestWardrobeSubset(wardrobe, prompt);
+    const styleProfile = user.user_metadata?.styleProfile;
+    const responseLanguage =
+      styleProfile &&
+      typeof styleProfile === "object" &&
+      typeof styleProfile.language === "string"
+        ? (LANGUAGE_NAMES[styleProfile.language] ?? styleProfile.language)
+        : "bahasa yang sama dengan permintaan user";
+    const profileContext =
+      styleProfile && typeof styleProfile === "object"
+        ? `Preferensi personal user:
+- Gaya: ${Array.isArray(styleProfile.styles) ? styleProfile.styles.join(", ") || "belum diisi" : "belum diisi"}
+- Warna favorit: ${typeof styleProfile.favoriteColors === "string" ? styleProfile.favoriteColors || "belum diisi" : "belum diisi"}
+- Warna yang dihindari: ${typeof styleProfile.avoidColors === "string" ? styleProfile.avoidColors || "belum diisi" : "belum diisi"}
+- Occasion utama: ${typeof styleProfile.occasions === "string" ? styleProfile.occasions || "belum diisi" : "belum diisi"}`
+        : "Preferensi personal user: belum diisi";
     const wardrobeContext = candidateItems
       .map(
         (item) =>
@@ -134,7 +163,7 @@ export async function POST(req: NextRequest) {
       )
       .join("\n");
 
-    const systemPrompt = `You are a fashion stylist AI. You will be given a curated subset of the user's wardrobe and a request.
+    const systemPrompt = `You are a fashion stylist AI. You will be given a curated subset of the user's wardrobe, their personal style preferences, and a request.
 
 Your job is to choose the most suitable outfit from this subset only. Do NOT pick items from outside the list. Do NOT assume the user wants to wear all items in the wardrobe. Select only the best 2-5 items that match the user's request and feel coherent together.
 
@@ -149,9 +178,10 @@ Rules:
 - Only use item ids from the wardrobe list provided.
 - Prefer the most fitting subset, not every item.
 - Keep the outfit balanced and realistic.
-- Respond in the same language as the user's request.`;
+- Respect the user's personal preferences when they do not conflict with the request.
+- Respond in ${responseLanguage}.`;
 
-    const userPrompt = `Wardrobe yang paling relevan:\n${wardrobeContext}\n\nPermintaan: ${prompt}`;
+    const userPrompt = `${profileContext}\n\nWardrobe yang paling relevan:\n${wardrobeContext}\n\nPermintaan: ${prompt}`;
 
     const rawResponse = await callGroqStructured(systemPrompt, userPrompt);
     const parsed = JSON.parse(rawResponse);

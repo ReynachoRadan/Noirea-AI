@@ -95,4 +95,129 @@ describe("wardrobe image analysis", () => {
       color: "blue",
     });
   });
+
+  it("normalizes clothing category synonyms", async () => {
+    groq.callGroqVisionStructured.mockResolvedValue(
+      "VALID: yes\nCONFIDENCE: high\nNAME: Blue jeans\nCATEGORY: pants\nCOLOR: blue",
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      category: "bottom",
+    });
+  });
+
+  it("classifies footwear synonyms as shoes", async () => {
+    groq.callGroqVisionStructured.mockResolvedValue(
+      "VALID: yes\nCONFIDENCE: high\nNAME: White sneakers\nCATEGORY: footwear\nCOLOR: white",
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ category: "shoes" });
+  });
+
+  it("returns only the color value", async () => {
+    groq.callGroqVisionStructured.mockResolvedValue(
+      "VALID: yes\nCONFIDENCE: high\nNAME: White sneakers\nCATEGORY: shoes\nCOLOR: dominant color is white",
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ color: "white" });
+  });
+
+  it("extracts the item name from descriptive labels", async () => {
+    groq.callGroqVisionStructured.mockResolvedValue(
+      "VALID: yes\nCONFIDENCE: high\nPRODUCT NAME: Black running shoes\nCATEGORY: footwear\nCOLOR: primary color is black",
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      name: "Black running shoes",
+      category: "shoes",
+      color: "black",
+    });
+  });
+
+  it("removes sentence prefixes from the item name", async () => {
+    groq.callGroqVisionStructured.mockResolvedValue(
+      "NAME: It's a white sneaker\nCATEGORY: shoes\nCOLOR: white",
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      name: "white sneaker",
+      category: "shoes",
+      color: "white",
+    });
+  });
+
+  it("removes prompt placeholders and supporting color words", async () => {
+    groq.callGroqVisionStructured.mockResolvedValue(
+      "NAME: [specific short item name]\nCATEGORY: shoes\nCOLOR: a deep blue",
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      name: "",
+      category: "shoes",
+      color: "blue",
+    });
+  });
+
+  it("removes the item-is prefix from the item name", async () => {
+    groq.callGroqVisionStructured.mockResolvedValue(
+      "NAME: item is a loafer\nCATEGORY: shoes\nCOLOR: brown",
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      name: "loafer",
+      category: "shoes",
+      color: "brown",
+    });
+  });
+
+  it("keeps a usable category when the model is uncertain", async () => {
+    groq.callGroqVisionStructured.mockResolvedValue(
+      "VALID: no\nCONFIDENCE: low\nNAME: Unknown\nCATEGORY: top\nCOLOR: unknown",
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      name: "Unknown",
+      category: "top",
+      color: "unknown",
+    });
+  });
+
+  it("parses labels after a model preamble", async () => {
+    groq.callGroqVisionStructured.mockResolvedValue(
+      "I inspected the image. NAME is White shirt; CATEGORY is shirt; COLOUR is white.",
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      name: "White shirt",
+      category: "top",
+      color: "white",
+    });
+  });
 });
