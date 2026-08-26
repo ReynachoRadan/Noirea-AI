@@ -20,7 +20,6 @@ import remarkGfm from "remark-gfm";
 
 type ChatBoxProps = {
   messages: Message[];
-  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   onSend: (text: string) => void;
   onEdit: (index: number, newText: string) => void;
   isLoading: boolean;
@@ -37,7 +36,6 @@ const welcomeMessages = [
 export default function ChatBox({
   messages,
   onSend,
-  setMessages,
   isLoading,
   onEdit,
 }: ChatBoxProps) {
@@ -93,10 +91,6 @@ export default function ChatBox({
       setEditingIndex(null);
       setText(""); // Kosongkan text input jika sebelumnya isi hasil edit
     }
-  };
-
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
   };
 
   const isEmpty = messages.length === 0;

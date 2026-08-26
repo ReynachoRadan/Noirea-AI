@@ -8,6 +8,7 @@ import {
   ImagePlus,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -63,6 +64,15 @@ export default function WardrobePage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const editImageInputRef = useRef<HTMLInputElement>(null);
+  const [editingItem, setEditingItem] = useState<WardrobeItem | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState<ClothingCategory>("top");
+  const [editColor, setEditColor] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editImageFileName, setEditImageFileName] = useState("");
+  const [editError, setEditError] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const fetchItems = async () => {
     try {
@@ -195,6 +205,86 @@ export default function WardrobePage() {
       setItems((prev) => prev.filter((item) => item.id !== id));
     } catch (error) {
       console.error("Failed to delete wardrobe item:", error);
+    }
+  };
+
+  const openEdit = (item: WardrobeItem) => {
+    setEditingItem(item);
+    setEditName(item.name);
+    setEditCategory(item.category);
+    setEditColor(item.color);
+    setEditImageUrl(item.imageUrl || "");
+    setEditImageFileName("");
+    setEditError("");
+  };
+
+  const closeEdit = () => {
+    if (isSavingEdit) return;
+    setEditingItem(null);
+    setEditError("");
+    if (editImageInputRef.current) editImageInputRef.current.value = "";
+  };
+
+  const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setEditError("Pilih file gambar yang valid.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setEditError("Ukuran gambar maksimal 5 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") return;
+      setEditImageUrl(reader.result);
+      setEditImageFileName(file.name);
+      setEditError("");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem || !editName.trim() || !editColor.trim()) {
+      setEditError("Nama dan warna wajib diisi.");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError("");
+    try {
+      const res = await fetch(`/api/wardrobe/${editingItem.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName.trim(),
+          category: editCategory,
+          color: editColor.trim(),
+          imageUrl: editImageUrl.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal memperbarui item");
+
+      setItems((prev) =>
+        prev.map((item) => (item.id === editingItem.id ? data : item)),
+      );
+      setEditingItem(null);
+      if (editImageInputRef.current) editImageInputRef.current.value = "";
+    } catch (error) {
+      setEditError(
+        error instanceof Error ? error.message : "Gagal memperbarui item.",
+      );
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -341,8 +431,149 @@ export default function WardrobePage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {filteredItems.map((item) => (
-            <WardrobeCard key={item.id} item={item} onDelete={handleDelete} />
+            <WardrobeCard
+              key={item.id}
+              item={item}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+            />
           ))}
+        </div>
+      )}
+
+      {editingItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeEdit();
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-wardrobe-title"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-neutral-700 bg-neutral-900 p-5 shadow-2xl"
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+                  Wardrobe item
+                </p>
+                <h2
+                  id="edit-wardrobe-title"
+                  className="mt-1 text-lg font-semibold text-white"
+                >
+                  Edit item
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={closeEdit}
+                className="rounded-lg p-2 text-neutral-400 transition hover:bg-neutral-800 hover:text-white"
+                title="Tutup"
+                aria-label="Tutup edit item"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1.5 text-sm text-neutral-300">
+                  Nama item
+                  <input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2.5 text-sm text-white outline-none focus:border-amber-300"
+                    required
+                  />
+                </label>
+                <label className="space-y-1.5 text-sm text-neutral-300">
+                  Kategori
+                  <select
+                    value={editCategory}
+                    onChange={(e) =>
+                      setEditCategory(e.target.value as ClothingCategory)
+                    }
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2.5 text-sm capitalize text-white outline-none focus:border-amber-300"
+                  >
+                    {CATEGORIES.map((itemCategory) => (
+                      <option key={itemCategory} value={itemCategory}>
+                        {itemCategory}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <label className="block space-y-1.5 text-sm text-neutral-300">
+                Warna
+                <input
+                  value={editColor}
+                  onChange={(e) => setEditColor(e.target.value)}
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2.5 text-sm text-white outline-none focus:border-amber-300"
+                  required
+                />
+              </label>
+
+              <label className="block space-y-1.5 text-sm text-neutral-300">
+                URL gambar
+                <input
+                  value={editImageUrl.startsWith("data:") ? "" : editImageUrl}
+                  onChange={(e) => {
+                    setEditImageUrl(e.target.value);
+                    setEditImageFileName("");
+                  }}
+                  placeholder="URL gambar (opsional)"
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2.5 text-sm text-white outline-none focus:border-amber-300"
+                />
+              </label>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-200 transition hover:border-amber-300 hover:text-white">
+                  <ImagePlus className="h-4 w-4" />
+                  {editImageFileName ? "Gambar dipilih" : "Ganti gambar"}
+                  <input
+                    ref={editImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditImageUpload}
+                    className="sr-only"
+                  />
+                </label>
+                {editImageUrl && (
+                  <div className="h-12 w-12 overflow-hidden rounded-lg border border-neutral-700 bg-neutral-800">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={editImageUrl}
+                      alt="Preview gambar item"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {editError && <p className="text-sm text-red-300">{editError}</p>}
+
+              <div className="flex justify-end gap-2 border-t border-neutral-800 pt-4">
+                <button
+                  type="button"
+                  onClick={closeEdit}
+                  className="rounded-lg px-4 py-2 text-sm text-neutral-300 transition hover:bg-neutral-800 hover:text-white"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="rounded-lg bg-amber-300 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSavingEdit ? "Menyimpan..." : "Simpan perubahan"}
+                </button>
+              </div>
+            </form>
+          </section>
         </div>
       )}
 

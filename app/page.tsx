@@ -223,7 +223,6 @@ export default function Page() {
           ) : currentSession ? (
             <ChatBox
               messages={currentSession?.messages ?? []}
-              setMessages={() => {}}
               onSend={handleSend}
               isLoading={isLoading}
               onEdit={handleEditMessage}

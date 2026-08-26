@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function UserMenu() {
   const [email, setEmail] = useState<string | null>(null);
@@ -14,7 +14,7 @@ export default function UserMenu() {
     supabase.auth.getUser().then(({ data }) => {
       setEmail(data.user?.email ?? null);
     });
-  }, []);
+  }, [supabase.auth]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth/get-user";
+import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
 
 export async function GET() {
   const { user, errorResponse } = await getAuthenticatedUser();
@@ -17,7 +17,7 @@ export async function GET() {
     console.error("Failed to fetch sessions:", error);
     return NextResponse.json(
       { error: "Failed to fetch sessions" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -39,7 +39,7 @@ export async function POST() {
     console.error("Failed to create session:", error);
     return NextResponse.json(
       { error: "Failed to create session" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
