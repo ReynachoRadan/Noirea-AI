@@ -46,3 +46,21 @@ next-env.d.ts
 .claude/
 .windsurf/
 skills-lock.json
+
+# IDE & Editor settings
+.vscode/
+.idea/
+
+# Local AI & Tools config
+.continue/
+.mcp.json
+.ripgreprc
+
+# Local Shell / Dotfiles in workspace
+.bash_profile
+.bashrc
+.profile
+.zprofile
+.zshrc
+.gitconfig
+.gitmodules

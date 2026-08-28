@@ -64,8 +64,8 @@ export default function ProfilePage() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-950 px-5 py-8 text-white sm:px-8">
-      <div className="mx-auto max-w-2xl">
+    <main className="min-h-screen overflow-y-auto bg-neutral-950 px-5 py-8 text-white sm:px-8">
+      <div className="mx-auto max-w-2xl pb-16">
         <Link
           href="/"
           className="mb-8 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"

@@ -33,7 +33,7 @@ NOIRÉA lets users log their own wardrobe items and asks an AI stylist for outfi
 - Saved outfits with item ownership validation and delete support
 - Personal style profile with AI response language preference
 - Personalized chat welcome, name usage, and language-aware AI responses
-- Mix & Match tool for selecting wardrobe items and checking outfit coherence
+- Mix & Match tool with category filtering and scrollable item grid
 - Mix & Match results modal with detailed reasoning, color, proportion, and occasion analysis
 - Save generated Mix & Match outfits to Saved Looks or edit the selected items
 

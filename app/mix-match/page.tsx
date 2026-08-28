@@ -1,5 +1,4 @@
 "use client";
-
 import { WardrobeItem } from "@/types";
 import {
   ArrowLeft,
@@ -18,6 +17,7 @@ const MAX_SELECTED_ITEMS = 5;
 export default function MixMatchPage() {
   const [items, setItems] = useState<WardrobeItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [occasion, setOccasion] = useState("casual sehari-hari");
   const [result, setResult] = useState<{
     summary: string;
@@ -50,6 +50,11 @@ export default function MixMatchPage() {
 
     loadItems();
   }, []);
+
+  const filteredItems = items.filter((item) => {
+    if (selectedCategory === "all") return true;
+    return item.category === selectedCategory;
+  });
 
   const toggleItem = (id: string) => {
     setSelectedIds((current) => {
@@ -177,6 +182,35 @@ export default function MixMatchPage() {
               </span>
             </div>
 
+            {!isLoading && items.length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {[
+                  { id: "all", label: "Semua" },
+                  { id: "top", label: "Top" },
+                  { id: "bottom", label: "Bottom" },
+                  { id: "outerwear", label: "Outerwear" },
+                  { id: "shoes", label: "Shoes" },
+                  { id: "accessory", label: "Accessory" },
+                ].map((cat) => {
+                  const isActive = selectedCategory === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                        isActive
+                          ? "bg-amber-300 font-semibold text-neutral-950"
+                          : "border border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-neutral-700 hover:text-white"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {isLoading ? (
               <p className="text-sm text-neutral-500">Memuat wardrobe...</p>
             ) : items.length === 0 ? (
@@ -192,51 +226,59 @@ export default function MixMatchPage() {
                   Buka Wardrobe
                 </Link>
               </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-8 text-center">
+                <p className="text-sm text-neutral-400">
+                  Tidak ada item dalam kategori ini.
+                </p>
+              </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {items.map((item) => {
-                  const isSelected = selectedIds.includes(item.id);
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => toggleItem(item.id)}
-                      className={`overflow-hidden rounded-xl border text-left transition ${
-                        isSelected
-                          ? "border-amber-300 bg-amber-300/10"
-                          : "border-neutral-800 bg-neutral-900 hover:border-neutral-600"
-                      }`}
-                    >
-                      <div className="relative aspect-square bg-neutral-800">
-                        {item.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={item.imageUrl}
-                            alt={item.name}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-neutral-600">
-                            <Shirt className="h-7 w-7" />
-                          </div>
-                        )}
-                        {isSelected && (
-                          <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-neutral-950">
-                            <Check className="h-4 w-4" />
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-3">
-                        <p className="truncate text-sm font-medium text-white">
-                          {item.name}
-                        </p>
-                        <p className="mt-1 truncate text-xs capitalize text-neutral-500">
-                          {item.category} · {item.color}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="max-h-[520px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3">
+                  {filteredItems.map((item) => {
+                    const isSelected = selectedIds.includes(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => toggleItem(item.id)}
+                        className={`overflow-hidden rounded-xl border text-left transition ${
+                          isSelected
+                            ? "border-amber-300 bg-amber-300/10"
+                            : "border-neutral-800 bg-neutral-900 hover:border-neutral-600"
+                        }`}
+                      >
+                        <div className="relative aspect-square bg-neutral-800">
+                          {item.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-neutral-600">
+                              <Shirt className="h-7 w-7" />
+                            </div>
+                          )}
+                          {isSelected && (
+                            <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-neutral-950">
+                              <Check className="h-4 w-4" />
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <p className="truncate text-sm font-medium text-white">
+                            {item.name}
+                          </p>
+                          <p className="mt-1 truncate text-xs capitalize text-neutral-500">
+                            {item.category} · {item.color}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </section>
