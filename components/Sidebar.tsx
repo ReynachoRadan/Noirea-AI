@@ -2,7 +2,7 @@
 
 import UserMenu from "@/components/usermenu";
 import { ChatSession } from "@/types";
-import { MessageSquare, Shirt, Trash2 } from "lucide-react";
+import { Combine, MessageSquare, Shirt, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -72,6 +72,13 @@ export default function Sidebar({
           className="flex items-center gap-2 py-2 px-4 rounded-lg text-sm font-medium text-gray-700 border border-gray-200 hover:bg-gray-100 transition"
         >
           <Shirt size={16} /> Wardrobe
+        </Link>
+
+        <Link
+          href="/mix-match"
+          className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+        >
+          <Combine size={16} /> Mix & Match
         </Link>
 
         <div className="flex flex-col gap-3">
