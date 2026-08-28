@@ -2,7 +2,7 @@
 
 AI-powered personal wardrobe and outfit recommendation platform.
 
-> 🚧 **Status as of 2026-08-27:** Core chat, authentication, wardrobe management, AI recommendations, image analysis, saved outfits, Supabase Storage, and personalized profiles are implemented and validated. Mix & Match and production deployment remain next.
+> 🚧 **Status as of 2026-08-28:** Core chat, authentication, wardrobe management, AI recommendations, image analysis, saved outfits, Supabase Storage, personalized profiles, and Mix & Match are implemented and validated. Production deployment remains next.
 
 ---
 
@@ -33,10 +33,12 @@ NOIRÉA lets users log their own wardrobe items and asks an AI stylist for outfi
 - Saved outfits with item ownership validation and delete support
 - Personal style profile with AI response language preference
 - Personalized chat welcome, name usage, and language-aware AI responses
+- Mix & Match tool for selecting wardrobe items and checking outfit coherence
+- Mix & Match results modal with detailed reasoning, color, proportion, and occasion analysis
+- Save generated Mix & Match outfits to Saved Looks or edit the selected items
 
 **Planned:**
 
-- Mix & Match tool
 - Production deployment
 
 ## Architecture
@@ -179,6 +181,8 @@ Current verification combines automated API tests, build checks, and manual feat
 - Vision parsing handles footwear, category aliases, model preambles, placeholders, and color-only output
 - Vision calls retry once after a temporary Groq rate limit
 - Profile settings are stored in Supabase Auth metadata and applied to chat prompts
+- Mix & Match requires at least two wardrobe items and validates selected item ownership
+- Mix & Match analysis opens in a result modal with save and edit actions
 
 The authenticated browser flow (login → add wardrobe item → analyze image → recommend outfit → save outfit → delete outfit) still requires manual verification with a configured Supabase account.
 
@@ -208,7 +212,7 @@ Not yet deployed. A future target is Vercel with Supabase PostgreSQL, Supabase S
 - [x] Saved looks
 - [x] Supabase Storage image uploads
 - [x] Personal style profile
-- [ ] Mix & Match tool
+- [x] Mix & Match tool
 - [x] Automated API testing
 - [ ] Production deployment
 

@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { prompt } = await req.json();
+    const { prompt, itemIds } = await req.json();
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
         { error: "Missing or invalid 'prompt'" },
@@ -140,7 +140,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const candidateItems = pickBestWardrobeSubset(wardrobe, prompt);
+    const selectedItemIds = Array.isArray(itemIds)
+      ? itemIds.filter((id: unknown): id is string => typeof id === "string")
+      : [];
+    const candidateItems = selectedItemIds.length
+      ? wardrobe.filter((item) => selectedItemIds.includes(item.id))
+      : pickBestWardrobeSubset(wardrobe, prompt);
+
+    if (selectedItemIds.length > 0 && candidateItems.length < 2) {
+      return NextResponse.json(
+        { error: "Pilih setidaknya dua item wardrobe yang valid." },
+        { status: 400 },
+      );
+    }
     const styleProfile = user.user_metadata?.styleProfile;
     const responseLanguage =
       styleProfile &&
