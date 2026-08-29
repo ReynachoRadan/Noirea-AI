@@ -1,6 +1,8 @@
 "use client";
 
 import WardrobeCard from "@/components/wardrobe/wardrobecard";
+import { getTranslation } from "@/lib/i18n";
+import { StyleProfile } from "@/types/profile";
 import { ClothingCategory, SavedOutfit, WardrobeItem } from "@/types";
 import {
   ArrowLeft,
@@ -51,6 +53,7 @@ export default function WardrobePage() {
   const [items, setItems] = useState<WardrobeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savedOutfits, setSavedOutfits] = useState<SavedOutfit[]>([]);
+  const [lang, setLang] = useState("id");
   const [isSavedLoading, setIsSavedLoading] = useState(true);
   const [name, setName] = useState("");
   const [category, setCategory] = useState<ClothingCategory>("top");
@@ -90,6 +93,47 @@ export default function WardrobePage() {
   useEffect(() => {
     fetchItems();
   }, []);
+
+  useEffect(() => {
+    const loadLanguage = async () => {
+      try {
+        const response = await fetch("/api/profile", { cache: "no-store" });
+        if (!response.ok) return;
+        const profileData = (await response.json()) as StyleProfile;
+        if (profileData?.language) setLang(profileData.language);
+      } catch {
+        // ignore
+      }
+    };
+
+    loadLanguage();
+  }, []);
+
+  useEffect(() => {
+    const handleLanguageEvent = (event: Event) => {
+      const nextLanguage = (event as CustomEvent<string>).detail;
+      if (nextLanguage) setLang(nextLanguage);
+    };
+
+    window.addEventListener("language-change", handleLanguageEvent);
+    return () => window.removeEventListener("language-change", handleLanguageEvent);
+  }, []);
+
+  const t = getTranslation(lang);
+  const wardrobeIntroMap: Record<string, string> = {
+    id: "Kelola item favoritmu, pantau wardrobe, dan temukan kombinasi yang sesuai dengan gaya serta kegiatan harian.",
+    en: "Manage your favorite pieces, track your wardrobe, and discover combinations that match your style and daily plans.",
+    es: "Gestiona tus prendas favoritas, lleva un control de tu guardarropa y descubre combinaciones que se adapten a tu estilo y tus actividades diarias.",
+    zh: "管理你最喜欢的单品，跟踪你的衣柜，并发现适合你风格和日常安排的搭配组合。",
+    hi: "अपने पसंदीदा आइटम प्रबंधित करें, अपने वार्डरोब को ट्रैक करें और ऐसे कॉम्बिनेशन खोजें जो आपके स्टाइल और दैनिक कार्यक्रम से मेल खाते हों।",
+    ar: "أدر قطعك المفضلة، وتتبع خزانة ملابسك، واكتشف تركيبات تناسب أسلوبك وخططك اليومية.",
+    pt: "Gerencie suas peças favoritas, acompanhe seu guarda-roupa e descubra combinações que combinem com seu estilo e rotina diária.",
+    fr: "Gérez vos pièces préférées, suivez votre garde-robe et découvrez des combinaisons qui correspondent à votre style et à votre routine quotidienne.",
+    de: "Verwalte deine Lieblingsstücke, behalte deinen Kleiderschrank im Blick und entdecke Kombinationen, die zu deinem Stil und deinen täglichen Aktivitäten passen.",
+    ja: "お気に入りのアイテムを管理し、ワードローブを把握し、あなたのスタイルや日常に合うコーディネートを見つけましょう。",
+    ko: "좋아하는 아이템을 관리하고 옷장을 정리하며, 스타일과 일상에 맞는 조합을 찾아보세요.",
+  };
+  const wardrobeIntro = wardrobeIntroMap[lang] ?? wardrobeIntroMap.en;
 
   useEffect(() => {
     const fetchSavedOutfits = async () => {
@@ -145,13 +189,13 @@ export default function WardrobePage() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setImageError("Pilih file gambar yang valid.");
+      setImageError(lang === "id" ? "Pilih file gambar yang valid." : "Please choose a valid image file.");
       e.target.value = "";
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setImageError("Ukuran gambar maksimal 5 MB.");
+      setImageError(lang === "id" ? "Ukuran gambar maksimal 5 MB." : "Maximum image size is 5 MB.");
       e.target.value = "";
       return;
     }
@@ -169,7 +213,11 @@ export default function WardrobePage() {
 
   const handleAnalyzeImage = async () => {
     if (!imageUrl.startsWith("data:image/")) {
-      setAnalysisError("Upload gambar terlebih dahulu untuk dianalisis.");
+      setAnalysisError(
+        lang === "id"
+          ? "Upload gambar terlebih dahulu untuk dianalisis."
+          : "Upload an image before analyzing it.",
+      );
       return;
     }
 
@@ -309,10 +357,23 @@ export default function WardrobePage() {
         href="/"
         className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white transition mb-4"
       >
-        <ArrowLeft size={16} /> Back to Chat
+        <ArrowLeft size={16} /> {t.backToChat}
       </Link>
 
-      <h1 className="text-xl font-medium mb-6">Wardrobe</h1>
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-xl font-medium">{t.wardrobeTitle}</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-400">
+            {wardrobeIntro}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-end">
+          <p className="rounded-full border border-amber-300/40 bg-amber-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-300">
+            {t.wardrobe}
+          </p>
+        </div>
+      </div>
 
       {/* Add form */}
       <form
@@ -320,7 +381,7 @@ export default function WardrobePage() {
         className="flex flex-wrap gap-3 mb-8 p-4 rounded-xl border border-neutral-800 bg-neutral-900"
       >
         <input
-          placeholder="Nama item"
+          placeholder={t.itemNamePlaceholder}
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="flex-1 min-w-[140px] bg-neutral-800 rounded-lg px-3 py-2 text-sm outline-none"
@@ -332,18 +393,18 @@ export default function WardrobePage() {
         >
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {c === "top" ? t.top : c === "bottom" ? t.bottom : c === "outerwear" ? t.outerwear : c === "shoes" ? t.shoes : t.accessory}
             </option>
           ))}
         </select>
         <input
-          placeholder="Warna"
+          placeholder={t.colorPlaceholder}
           value={color}
           onChange={(e) => setColor(e.target.value)}
           className="w-28 bg-neutral-800 rounded-lg px-3 py-2 text-sm outline-none"
         />
         <input
-          placeholder="URL gambar (opsional)"
+          placeholder={t.imageUrlPlaceholder}
           value={imageUrl.startsWith("data:") ? "" : imageUrl}
           onChange={(e) => {
             setImageUrl(e.target.value);
@@ -353,7 +414,7 @@ export default function WardrobePage() {
         />
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-200 transition hover:border-amber-300 hover:text-white">
           <ImagePlus className="h-4 w-4" />
-          {imageFileName ? "Gambar dipilih" : "Upload gambar"}
+          {imageFileName ? t.imageSelected : t.uploadImage}
           <input
             ref={imageInputRef}
             type="file"
@@ -369,13 +430,13 @@ export default function WardrobePage() {
           className="inline-flex items-center gap-2 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 py-2 text-sm text-amber-200 transition hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Sparkles className="h-4 w-4" />
-          {isAnalyzing ? "Menganalisis..." : "Analisis AI"}
+          {isAnalyzing ? t.analyzing : t.analyzeAi}
         </button>
         <button
           type="submit"
           className="px-4 py-2 rounded-lg bg-white text-black text-sm font-medium hover:bg-neutral-200 transition"
         >
-          Tambah
+          {t.add}
         </button>
         {imageError && (
           <p className="basis-full text-xs text-red-300">{imageError}</p>
@@ -393,7 +454,7 @@ export default function WardrobePage() {
       {items.length > 0 && (
         <div className="mb-5 flex items-center gap-3">
           <label htmlFor="wardrobe-filter" className="text-sm text-neutral-400">
-            Tampilkan
+            {t.show}
           </label>
           <select
             id="wardrobe-filter"
@@ -403,7 +464,9 @@ export default function WardrobePage() {
             }
             className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm capitalize text-white outline-none focus:border-amber-300"
           >
-            <option value="all">Semua item ({items.length})</option>
+            <option value="all">
+              {t.allItems} ({items.length})
+            </option>
             {CATEGORIES.map((itemCategory) => {
               const itemCount = items.filter(
                 (item) => item.category === itemCategory,
@@ -421,12 +484,12 @@ export default function WardrobePage() {
 
       {/* Grid */}
       {isLoading ? (
-        <p className="text-neutral-500 text-sm">Memuat wardrobe...</p>
+        <p className="text-neutral-500 text-sm">{t.loadingWardrobe}</p>
       ) : items.length === 0 ? (
-        <p className="text-neutral-500 text-sm">Belum ada item wardrobe.</p>
+        <p className="text-neutral-500 text-sm">{t.noWardrobeItems}</p>
       ) : filteredItems.length === 0 ? (
         <p className="text-neutral-500 text-sm">
-          Belum ada item dalam kategori {selectedCategory}.
+          {t.noCategoryItems} {selectedCategory}
         </p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -464,15 +527,15 @@ export default function WardrobePage() {
                   id="edit-wardrobe-title"
                   className="mt-1 text-lg font-semibold text-white"
                 >
-                  Edit item
+                  {t.editItem}
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={closeEdit}
                 className="rounded-lg p-2 text-neutral-400 transition hover:bg-neutral-800 hover:text-white"
-                title="Tutup"
-                aria-label="Tutup edit item"
+                title={t.cancel}
+                aria-label={t.cancel}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -481,7 +544,7 @@ export default function WardrobePage() {
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-1.5 text-sm text-neutral-300">
-                  Nama item
+                  {t.itemNamePlaceholder}
                   <input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
@@ -490,7 +553,7 @@ export default function WardrobePage() {
                   />
                 </label>
                 <label className="space-y-1.5 text-sm text-neutral-300">
-                  Kategori
+                  {t.categoryLabel}
                   <select
                     value={editCategory}
                     onChange={(e) =>
@@ -508,7 +571,7 @@ export default function WardrobePage() {
               </div>
 
               <label className="block space-y-1.5 text-sm text-neutral-300">
-                Warna
+                {t.colorPlaceholder}
                 <input
                   value={editColor}
                   onChange={(e) => setEditColor(e.target.value)}
@@ -518,14 +581,14 @@ export default function WardrobePage() {
               </label>
 
               <label className="block space-y-1.5 text-sm text-neutral-300">
-                URL gambar
+                {t.imageUrlPlaceholder}
                 <input
                   value={editImageUrl.startsWith("data:") ? "" : editImageUrl}
                   onChange={(e) => {
                     setEditImageUrl(e.target.value);
                     setEditImageFileName("");
                   }}
-                  placeholder="URL gambar (opsional)"
+                  placeholder={t.imageUrlPlaceholder}
                   className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2.5 text-sm text-white outline-none focus:border-amber-300"
                 />
               </label>
@@ -533,7 +596,7 @@ export default function WardrobePage() {
               <div className="flex flex-wrap items-center gap-3">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-200 transition hover:border-amber-300 hover:text-white">
                   <ImagePlus className="h-4 w-4" />
-                  {editImageFileName ? "Gambar dipilih" : "Ganti gambar"}
+                  {editImageFileName ? t.imageSelected : t.uploadImage}
                   <input
                     ref={editImageInputRef}
                     type="file"
@@ -562,14 +625,14 @@ export default function WardrobePage() {
                   onClick={closeEdit}
                   className="rounded-lg px-4 py-2 text-sm text-neutral-300 transition hover:bg-neutral-800 hover:text-white"
                 >
-                  Batal
+                  {t.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingEdit}
                   className="rounded-lg bg-amber-300 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isSavingEdit ? "Menyimpan..." : "Simpan perubahan"}
+                  {isSavingEdit ? t.savingProfile : t.saveChanges}
                 </button>
               </div>
             </form>

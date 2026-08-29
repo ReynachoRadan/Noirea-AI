@@ -230,9 +230,36 @@ function pickRelevantWardrobeItems<
 >(items: T[], prompt: string) {
   if (!items.length) return [];
 
-  return [...items]
-    .sort((a, b) => scoreWardrobeItem(b, prompt) - scoreWardrobeItem(a, prompt))
-    .slice(0, 5);
+  const scored = [...items].map((item) => ({
+    item,
+    score: scoreWardrobeItem(item, prompt),
+  }));
+
+  const categoryOrder = ["top", "bottom", "shoes", "outerwear", "accessory"];
+  const selected: T[] = [];
+  const seen = new Set<string>();
+
+  for (const category of categoryOrder) {
+    const bestMatch = scored
+      .filter(({ item }) => item.category === category && !seen.has(item.id))
+      .sort((a, b) => b.score - a.score)[0];
+
+    if (bestMatch) {
+      selected.push(bestMatch.item);
+      seen.add(bestMatch.item.id);
+    }
+  }
+
+  for (const { item } of scored.sort((a, b) => b.score - a.score)) {
+    if (!seen.has(item.id)) {
+      selected.push(item);
+      seen.add(item.id);
+    }
+
+    if (selected.length >= 5) break;
+  }
+
+  return selected.slice(0, 5);
 }
 
 export async function POST(
@@ -291,6 +318,8 @@ export async function POST(
       const outfitPrompt = `Kamu adalah stylist fashion yang membantu user memilih outfit dari wardrobe mereka.
 
 Gunakan HANYA item di bawah ini. Jangan menebak item baru yang tidak ada di wardrobe.
+
+Prioritaskan outfit yang seimbang dan realistis: pilih 1 item dari top, 1 dari bottom, 1 dari shoes, dan tambahkan accessory atau outerwear bila ada, tanpa menumpuk lebih dari satu item dalam kategori yang sama bila memungkinkan.
 
 ${profileContext}
 

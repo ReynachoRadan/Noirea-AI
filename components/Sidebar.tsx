@@ -1,6 +1,7 @@
 "use client";
 
 import UserMenu from "@/components/usermenu";
+import { getTranslation } from "@/lib/i18n";
 import { ChatSession } from "@/types";
 import { Combine, MessageSquare, Shirt, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -56,6 +57,35 @@ export default function Sidebar({
   onDelete,
   onRename,
 }: SidebarProps) {
+  const [lang, setLang] = useState("id");
+
+  useEffect(() => {
+    const loadLanguage = async () => {
+      try {
+        const response = await fetch("/api/profile", { cache: "no-store" });
+        if (!response.ok) return;
+        const profile = await response.json();
+        if (profile?.language) setLang(profile.language);
+      } catch {
+        // keep default language
+      }
+    };
+
+    loadLanguage();
+  }, []);
+
+  const t = getTranslation(lang);
+
+  useEffect(() => {
+    const handleLanguageEvent = (event: Event) => {
+      const nextLanguage = (event as CustomEvent<string>).detail;
+      if (nextLanguage) setLang(nextLanguage);
+    };
+
+    window.addEventListener("language-change", handleLanguageEvent);
+    return () => window.removeEventListener("language-change", handleLanguageEvent);
+  }, []);
+
   return (
     <div className="min-w-[240px] w-[260px] max-w-[100%] bg-white border-r border-gray-200 p-4 flex flex-col justify-between space-y-4 h-full sticky top-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
       <div className="flex flex-col space-y-4">
@@ -64,21 +94,21 @@ export default function Sidebar({
           className="relative overflow-hidden w-full py-2 px-4 bg-black text-white font-semibold rounded-lg transition 
                hover:bg-gradient-to-r hover:from-black hover:to-gray-800 hover:ring-1 hover:ring-gray-300 shimmer-effect"
         >
-          + New Chat
+          {t.newChat}
         </button>
 
         <Link
           href="/wardrobe"
           className="flex items-center gap-2 py-2 px-4 rounded-lg text-sm font-medium text-gray-700 border border-gray-200 hover:bg-gray-100 transition"
         >
-          <Shirt size={16} /> Wardrobe
+          <Shirt size={16} /> {t.wardrobe}
         </Link>
 
         <Link
           href="/mix-match"
           className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
         >
-          <Combine size={16} /> Mix & Match
+          <Combine size={16} /> {t.mixMatch}
         </Link>
 
         <div className="flex flex-col gap-3">
@@ -99,14 +129,14 @@ export default function Sidebar({
                   onClick={() => onSelect(s.id)}
                   className="flex items-center gap-1 hover:text-black transition"
                 >
-                  <MessageSquare size={16} /> Open
+                  <MessageSquare size={16} /> {t.open}
                 </button>
 
                 <button
                   onClick={() => onDelete(s.id)}
                   className="flex items-center gap-1 hover:text-red-500 transition"
                 >
-                  <Trash2 size={16} /> Delete
+                  <Trash2 size={16} /> {t.delete}
                 </button>
               </div>
             </div>
