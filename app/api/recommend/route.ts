@@ -176,7 +176,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const wardrobe = await prisma.wardrobeItem.findMany({
+    const wardrobe: Awaited<
+      ReturnType<typeof prisma.wardrobeItem.findMany>
+    > = await prisma.wardrobeItem.findMany({
       where: { userId: user.id },
     });
 
@@ -194,7 +196,9 @@ export async function POST(req: NextRequest) {
       ? itemIds.filter((id: unknown): id is string => typeof id === "string")
       : [];
     const candidateItems = selectedItemIds.length
-      ? wardrobe.filter((item) => selectedItemIds.includes(item.id))
+      ? wardrobe.filter((item: (typeof wardrobe)[number]) =>
+          selectedItemIds.includes(item.id),
+        )
       : pickBestWardrobeSubset(wardrobe, prompt);
 
     if (selectedItemIds.length > 0 && candidateItems.length < 2) {
@@ -257,7 +261,7 @@ Rules:
         )
       : [];
 
-    let recommendedItems = wardrobe.filter((item) =>
+    let recommendedItems = wardrobe.filter((item: (typeof wardrobe)[number]) =>
       requestedIds.includes(item.id),
     );
 
