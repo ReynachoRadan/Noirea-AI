@@ -252,9 +252,15 @@ Rules:
     const userPrompt = `${profileContext}\n\nWardrobe yang paling relevan:\n${wardrobeContext}\n\nPermintaan: ${prompt}`;
 
     const rawResponse = await callGroqStructured(systemPrompt, userPrompt);
-    const parsed = JSON.parse(rawResponse);
+    const parsed = JSON.parse(rawResponse) as {
+      summary?: string;
+      reasoning?: string;
+      itemIds?: unknown[];
+    };
 
-    const validIds = new Set(candidateItems.map((item) => item.id));
+    const validIds = new Set(
+      candidateItems.map((item: (typeof candidateItems)[number]) => item.id),
+    );
     const requestedIds = Array.isArray(parsed.itemIds)
       ? parsed.itemIds.filter(
           (id: unknown) => typeof id === "string" && validIds.has(id),
