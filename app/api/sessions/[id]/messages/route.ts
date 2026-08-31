@@ -226,6 +226,8 @@ function pickRelevantWardrobeItems<
     category: string;
     color: string;
     tags?: string[];
+    imageUrl?: string | null;
+    createdAt?: Date | string | null;
   },
 >(items: T[], prompt: string) {
   if (!items.length) return [];

@@ -29,12 +29,16 @@ export async function PATCH(
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    const allMessages = await prisma.message.findMany({
+    const allMessages: Awaited<
+      ReturnType<typeof prisma.message.findMany>
+    > = await prisma.message.findMany({
       where: { sessionId },
       orderBy: { createdAt: "asc" },
     });
 
-    const editedIndex = allMessages.findIndex((m) => m.id === messageId);
+    const editedIndex = allMessages.findIndex(
+      (m: (typeof allMessages)[number]) => m.id === messageId,
+    );
     if (editedIndex === -1) {
       return NextResponse.json(
         { error: "Message not found in this session" },
@@ -45,7 +49,13 @@ export async function PATCH(
     const messagesToDelete = allMessages.slice(editedIndex + 1);
     if (messagesToDelete.length > 0) {
       await prisma.message.deleteMany({
-        where: { id: { in: messagesToDelete.map((m) => m.id) } },
+        where: {
+          id: {
+            in: messagesToDelete.map(
+              (m: (typeof messagesToDelete)[number]) => m.id,
+            ),
+          },
+        },
       });
     }
 

@@ -15,17 +15,22 @@ export async function GET() {
       prisma.wardrobeItem.findMany({ where: { userId: user.id } }),
     ]);
 
-    const itemsById = new Map(wardrobeItems.map((item) => [item.id, item]));
+    const itemsById = new Map<string, (typeof wardrobeItems)[number]>(
+      wardrobeItems.map((item: (typeof wardrobeItems)[number]) => [item.id, item]),
+    );
 
     return NextResponse.json(
-      outfits.map((outfit) => ({
-        ...outfit,
-        items: outfit.itemIds
-          .map((itemId) => itemsById.get(itemId))
-          .filter((item): item is (typeof wardrobeItems)[number] =>
-            Boolean(item),
-          ),
-      })),
+      outfits.map(
+        (outfit: (typeof outfits)[number]) => ({
+          ...outfit,
+          items: outfit.itemIds
+            .map((itemId: string) => itemsById.get(itemId))
+            .filter(
+              (item: unknown): item is (typeof wardrobeItems)[number] =>
+                Boolean(item),
+            ),
+        }),
+      ),
     );
   } catch (error) {
     console.error("Failed to fetch saved outfits:", error);

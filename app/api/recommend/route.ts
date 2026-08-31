@@ -290,7 +290,9 @@ Rules:
     return NextResponse.json({
       summary:
         parsed.summary ||
-        `Outfit ${recommendedItems.map((item) => item.name).join(", ")} paling sesuai untuk permintaanmu.`,
+        `Outfit ${recommendedItems
+          .map((item: (typeof recommendedItems)[number]) => item.name)
+          .join(", ")} paling sesuai untuk permintaanmu.`,
       items: recommendedItems,
       reasoning:
         parsed.reasoning ||
