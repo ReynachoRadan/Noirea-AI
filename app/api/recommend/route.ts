@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
     const selectedItemIds = Array.isArray(itemIds)
       ? itemIds.filter((id: unknown): id is string => typeof id === "string")
       : [];
-    const candidateItems = selectedItemIds.length
+    const candidateItems: Array<(typeof wardrobe)[number]> = selectedItemIds.length
       ? wardrobe.filter((item: (typeof wardrobe)[number]) =>
           selectedItemIds.includes(item.id),
         )
@@ -224,7 +224,7 @@ export async function POST(req: NextRequest) {
         : "Preferensi personal user: belum diisi";
     const wardrobeContext = candidateItems
       .map(
-        (item) =>
+        (item: (typeof candidateItems)[number]) =>
           `- id: ${item.id}, name: ${item.name}, category: ${item.category}, color: ${item.color}`,
       )
       .join("\n");
