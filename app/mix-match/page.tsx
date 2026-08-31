@@ -1,5 +1,6 @@
 "use client";
-
+import { getTranslation } from "@/lib/i18n";
+import { StyleProfile } from "@/types/profile";
 import { WardrobeItem } from "@/types";
 import {
   ArrowLeft,
@@ -18,6 +19,8 @@ const MAX_SELECTED_ITEMS = 5;
 export default function MixMatchPage() {
   const [items, setItems] = useState<WardrobeItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [lang, setLang] = useState("id");
   const [occasion, setOccasion] = useState("casual sehari-hari");
   const [result, setResult] = useState<{
     summary: string;
@@ -51,6 +54,38 @@ export default function MixMatchPage() {
     loadItems();
   }, []);
 
+  useEffect(() => {
+    const loadLanguage = async () => {
+      try {
+        const response = await fetch("/api/profile", { cache: "no-store" });
+        if (!response.ok) return;
+        const profileData = (await response.json()) as StyleProfile;
+        if (profileData?.language) setLang(profileData.language);
+      } catch {
+        // keep default language
+      }
+    };
+
+    loadLanguage();
+  }, []);
+
+  useEffect(() => {
+    const handleLanguageEvent = (event: Event) => {
+      const nextLanguage = (event as CustomEvent<string>).detail;
+      if (nextLanguage) setLang(nextLanguage);
+    };
+
+    window.addEventListener("language-change", handleLanguageEvent);
+    return () => window.removeEventListener("language-change", handleLanguageEvent);
+  }, []);
+
+  const t = getTranslation(lang);
+
+  const filteredItems = items.filter((item) => {
+    if (selectedCategory === "all") return true;
+    return item.category === selectedCategory;
+  });
+
   const toggleItem = (id: string) => {
     setSelectedIds((current) => {
       if (current.includes(id))
@@ -64,7 +99,7 @@ export default function MixMatchPage() {
   const handleMatch = async () => {
     if (selectedIds.length < 2 || isMatching) {
       if (selectedIds.length < 2) {
-        setError("Pilih minimal 2 item untuk membuat kombinasi outfit.");
+        setError(t.minTwoItemsError);
       }
       return;
     }
@@ -150,19 +185,18 @@ export default function MixMatchPage() {
           href="/"
           className="mb-8 inline-flex items-center gap-1.5 text-sm text-neutral-400 transition hover:text-white"
         >
-          <ArrowLeft size={16} /> Back to Chat
+          <ArrowLeft size={16} /> {t.backToChat}
         </Link>
 
         <header className="mb-8 max-w-2xl">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
-            Mix & Match
+            {t.mixMatch}
           </p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Susun kombinasi dari wardrobe kamu.
+            {t.mixMatchSubtitle}
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-            Pilih 2 sampai 5 item, lalu biarkan stylist mengecek kecocokan
-            warna, proporsi, dan suasananya.
+            {t.mixMatchDesc}
           </p>
         </header>
 
@@ -170,73 +204,110 @@ export default function MixMatchPage() {
           <section>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-medium text-neutral-200">
-                Pilih item
+                {t.selectItems}
               </h2>
               <span className="text-xs text-neutral-500">
-                {selectedIds.length}/{MAX_SELECTED_ITEMS} dipilih
+                {selectedIds.length}/{MAX_SELECTED_ITEMS} {t.selectedCount}
               </span>
             </div>
 
+            {!isLoading && items.length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {[
+                  { id: "all", label: t.allItems },
+                  { id: "top", label: t.top },
+                  { id: "bottom", label: t.bottom },
+                  { id: "outerwear", label: t.outerwear },
+                  { id: "shoes", label: t.shoes },
+                  { id: "accessory", label: t.accessory },
+                ].map((cat) => {
+                  const isActive = selectedCategory === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                        isActive
+                          ? "bg-amber-300 font-semibold text-neutral-950"
+                          : "border border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-neutral-700 hover:text-white"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {isLoading ? (
-              <p className="text-sm text-neutral-500">Memuat wardrobe...</p>
+              <p className="text-sm text-neutral-500">{t.loadingWardrobe}</p>
             ) : items.length === 0 ? (
               <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-8 text-center">
                 <Shirt className="mx-auto mb-3 h-6 w-6 text-neutral-600" />
                 <p className="text-sm text-neutral-400">
-                  Tambahkan item wardrobe terlebih dahulu.
+                  {t.noWardrobeItems}
                 </p>
                 <Link
                   href="/wardrobe"
                   className="mt-4 inline-block text-sm text-amber-300 hover:text-amber-200"
                 >
-                  Buka Wardrobe
+                  {t.wardrobe}
                 </Link>
               </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-8 text-center">
+                <p className="text-sm text-neutral-400">
+                  {t.noCategoryItems}
+                </p>
+              </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {items.map((item) => {
-                  const isSelected = selectedIds.includes(item.id);
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => toggleItem(item.id)}
-                      className={`overflow-hidden rounded-xl border text-left transition ${
-                        isSelected
-                          ? "border-amber-300 bg-amber-300/10"
-                          : "border-neutral-800 bg-neutral-900 hover:border-neutral-600"
-                      }`}
-                    >
-                      <div className="relative aspect-square bg-neutral-800">
-                        {item.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={item.imageUrl}
-                            alt={item.name}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-neutral-600">
-                            <Shirt className="h-7 w-7" />
-                          </div>
-                        )}
-                        {isSelected && (
-                          <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-neutral-950">
-                            <Check className="h-4 w-4" />
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-3">
-                        <p className="truncate text-sm font-medium text-white">
-                          {item.name}
-                        </p>
-                        <p className="mt-1 truncate text-xs capitalize text-neutral-500">
-                          {item.category} · {item.color}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="max-h-[520px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3">
+                  {filteredItems.map((item) => {
+                    const isSelected = selectedIds.includes(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => toggleItem(item.id)}
+                        className={`overflow-hidden rounded-xl border text-left transition ${
+                          isSelected
+                            ? "border-amber-300 bg-amber-300/10"
+                            : "border-neutral-800 bg-neutral-900 hover:border-neutral-600"
+                        }`}
+                      >
+                        <div className="relative aspect-square bg-neutral-800">
+                          {item.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-neutral-600">
+                              <Shirt className="h-7 w-7" />
+                            </div>
+                          )}
+                          {isSelected && (
+                            <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-neutral-950">
+                              <Check className="h-4 w-4" />
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <p className="truncate text-sm font-medium text-white">
+                            {item.name}
+                          </p>
+                          <p className="mt-1 truncate text-xs capitalize text-neutral-500">
+                            {item.category} · {item.color}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </section>
@@ -263,12 +334,11 @@ export default function MixMatchPage() {
               ) : (
                 <Sparkles className="h-4 w-4" />
               )}
-              {isMatching ? "Menilai kombinasi..." : "Cek kombinasi"}
+              {isMatching ? t.evaluatingCombination : t.checkCombination}
             </button>
             {selectedIds.length < 2 && (
               <p className="mt-3 text-xs leading-relaxed text-neutral-500">
-                Pilih setidaknya 2 item di sebelah kiri untuk mengaktifkan
-                rekomendasi.
+                {t.minTwoItemsError}
               </p>
             )}
             {error && (

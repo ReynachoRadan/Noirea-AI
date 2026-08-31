@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import { getTranslation } from "@/lib/i18n";
 import { LANGUAGE_OPTIONS, STYLE_OPTIONS, StyleProfile } from "@/types/profile";
 import { ArrowLeft, Check, UserRound } from "lucide-react";
 import Link from "next/link";
@@ -20,6 +21,26 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState("");
+  const [lang, setLang] = useState<keyof typeof import("@/lib/i18n").translations>("id");
+
+  useEffect(() => {
+    const currentLanguage = profile.language || "id";
+    setLang(currentLanguage as keyof typeof import("@/lib/i18n").translations);
+  }, [profile.language]);
+
+  useEffect(() => {
+    const handleLanguageEvent = (event: Event) => {
+      const nextLanguage = (event as CustomEvent<string>).detail;
+      if (nextLanguage) {
+        setLang(nextLanguage as keyof typeof import("@/lib/i18n").translations);
+      }
+    };
+
+    window.addEventListener("language-change", handleLanguageEvent);
+    return () => window.removeEventListener("language-change", handleLanguageEvent);
+  }, []);
+
+  const t = getTranslation(lang);
 
   useEffect(() => {
     fetch("/api/profile", { cache: "no-store" })
@@ -64,13 +85,13 @@ export default function ProfilePage() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-950 px-5 py-8 text-white sm:px-8">
-      <div className="mx-auto max-w-2xl">
+    <main className="min-h-screen overflow-y-auto bg-neutral-950 px-5 py-8 text-white sm:px-8">
+      <div className="mx-auto max-w-2xl pb-16">
         <Link
           href="/"
           className="mb-8 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
         >
-          <ArrowLeft className="h-4 w-4" /> Kembali ke chat
+          <ArrowLeft className="h-4 w-4" /> {t.backToChat}
         </Link>
         <div className="mb-8 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-300/15 text-amber-300">
@@ -78,28 +99,28 @@ export default function ProfilePage() {
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-amber-300">
-              Personal style
+              {t.personalStyle}
             </p>
-            <h1 className="text-2xl font-semibold">Profil gaya kamu</h1>
+            <h1 className="text-2xl font-semibold">{t.profileTitle}</h1>
           </div>
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-neutral-400">Memuat profil...</p>
+          <p className="text-sm text-neutral-400">{t.loadingProfile}</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <label className="block space-y-2 text-sm text-neutral-300">
-              Nama panggilan
+              {t.displayName}
               <input
                 value={profile.displayName}
                 onChange={(event) => update("displayName", event.target.value)}
-                placeholder="Contoh: Rani"
+                placeholder={t.displayNamePlaceholder}
                 className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-amber-300"
               />
             </label>
             <fieldset className="space-y-3">
               <legend className="text-sm text-neutral-300">
-                Gaya yang paling kamu suka
+                {t.favoriteStyles}
               </legend>
               <div className="flex flex-wrap gap-2">
                 {STYLE_OPTIONS.map((style) => {
@@ -119,37 +140,37 @@ export default function ProfilePage() {
               </div>
             </fieldset>
             <label className="block space-y-2 text-sm text-neutral-300">
-              Warna favorit
+              {t.favoriteColors}
               <input
                 value={profile.favoriteColors}
                 onChange={(event) =>
                   update("favoriteColors", event.target.value)
                 }
-                placeholder="Hitam, putih, navy"
+                placeholder={t.favoriteColorsPlaceholder}
                 className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-amber-300"
               />
             </label>
             <label className="block space-y-2 text-sm text-neutral-300">
-              Warna yang dihindari
+              {t.avoidColors}
               <input
                 value={profile.avoidColors}
                 onChange={(event) => update("avoidColors", event.target.value)}
-                placeholder="Warna yang jarang kamu pakai"
+                placeholder={t.avoidColorsPlaceholder}
                 className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-amber-300"
               />
             </label>
             <label className="block space-y-2 text-sm text-neutral-300">
-              Aktivitas atau occasion utama
+              {t.occasionsLabel}
               <textarea
                 value={profile.occasions}
                 onChange={(event) => update("occasions", event.target.value)}
-                placeholder="Kantor, kuliah, weekend, acara malam"
+                placeholder={t.occasionsPlaceholder}
                 rows={3}
                 className="w-full resize-none rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-amber-300"
               />
             </label>
             <label className="block space-y-2 text-sm text-neutral-300">
-              Bahasa rekomendasi AI
+              {t.aiLanguage}
               <select
                 value={profile.language}
                 onChange={(event) => update("language", event.target.value)}
@@ -164,7 +185,7 @@ export default function ProfilePage() {
             </label>
             <div className="flex items-center gap-4">
               <Button type="submit" disabled={isSaving}>
-                {isSaving ? "Menyimpan..." : "Simpan profil"}
+                {isSaving ? t.savingProfile : t.saveProfile}
               </Button>
               {status && (
                 <span className="text-sm text-neutral-400">{status}</span>

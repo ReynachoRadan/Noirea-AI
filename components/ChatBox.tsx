@@ -25,13 +25,85 @@ type ChatBoxProps = {
   isLoading: boolean;
 };
 
-const welcomeMessages = [
-  "Can I help you find the perfect outfit?",
-  "Need a fresh look for today? I can help.",
-  "Tell me your vibe, and I'll match it to your wardrobe.",
-  "Want outfit inspiration that fits your style?",
-  "I can help you build a look from what you already own.",
-];
+const welcomeMessagesByLanguage: Record<string, string[]> = {
+  id: [
+    "Bisa bantu cari outfit yang paling cocok untukmu?",
+    "Butuh tampilan baru hari ini? Saya bantu.",
+    "Ceritakan vibe kamu, dan saya akan cocokkan dengan wardrobe-mu.",
+    "Mau inspirasi outfit yang sesuai dengan gaya kamu?",
+    "Saya bisa bantu menyusun look dari apa yang sudah kamu miliki.",
+  ],
+  en: [
+    "Can I help you find the perfect outfit?",
+    "Need a fresh look for today? I can help.",
+    "Tell me your vibe, and I'll match it to your wardrobe.",
+    "Want outfit inspiration that fits your style?",
+    "I can help you build a look from what you already own.",
+  ],
+  es: [
+    "¿Puedo ayudarte a encontrar el outfit perfecto?",
+    "¿Necesitas un look nuevo hoy? Yo puedo ayudarte.",
+    "Cuéntame tu estilo y lo combinaré con tu guardarropa.",
+    "¿Quieres inspiración para outfits que se adapten a tu estilo?",
+    "Puedo ayudarte a crear un look con lo que ya tienes.",
+  ],
+  zh: [
+    "我可以帮你找到最适合的穿搭吗？",
+    "今天想换个新造型吗？我来帮你。",
+    "告诉我你的风格，我会根据你的衣柜来搭配。",
+    "想要符合你风格的穿搭灵感吗？",
+    "我可以根据你已有的衣物帮你搭出新的造型。",
+  ],
+  hi: [
+    "मैं आपके लिए सही आउटफ़िट ढूंढने में मदद कर सकता हूँ?",
+    "आज नया लुक चाहिए? मैं帮 करता हूँ।",
+    "अपना स्टाइल बताइए, मैं आपके वार्डरोब के अनुसार उसे मिलाऊँगा।",
+    "क्या आपको आपके स्टाइल के मुताबिक आउटफ़िट इंस्पिरेशन चाहिए?",
+    "मैं आपके पास मौजूद चीज़ों से लुक बनाने में मदद कर सकता हूँ।",
+  ],
+  ar: [
+    "هل أستطيع مساعدتك في العثور على الستايل المثالي؟",
+    "هل تحتاج إلى مظهر جديد اليوم؟ أستطيع المساعدة.",
+    "أخبرني عن ذوقك وسأطابقه مع خزانة ملابسك.",
+    "هل تريد إلهامًا لملابس تناسب أسلوبك؟",
+    "أستطيع مساعدتك في بناء مظهر باستخدام ما لديك بالفعل.",
+  ],
+  pt: [
+    "Posso ajudar você a encontrar o look perfeito?",
+    "Precisa de uma aparência nova hoje? Posso ajudar.",
+    "Me diga seu estilo e eu vou combinar com seu guarda-roupa.",
+    "Quer inspiração de looks que combinem com seu estilo?",
+    "Posso te ajudar a montar um visual com o que você já tem.",
+  ],
+  fr: [
+    "Je peux vous aider à trouver la tenue parfaite ?",
+    "Besoin d'un nouveau look aujourd'hui ? Je peux vous aider.",
+    "Dites-moi votre style, et je le marierai à votre garde-robe.",
+    "Vous voulez des idées de tenues qui correspondent à votre style ?",
+    "Je peux vous aider à créer un look avec ce que vous avez déjà.",
+  ],
+  de: [
+    "Kann ich dir helfen, das perfekte Outfit zu finden?",
+    "Brauchst du heute ein frisches Outfit? Ich helfe dir.",
+    "Sag mir deinen Stil, und ich passe ihn an deinen Kleiderschrank an.",
+    "Möchtest du Outfit-Inspirationen, die zu deinem Stil passen?",
+    "Ich kann dir helfen, ein Outfit aus dem zu kreieren, was du schon hast.",
+  ],
+  ja: [
+    "最適なコーディネートを見つけるお手伝いができますか？",
+    "今日は新しい見た目が必要ですか？私がサポートします。",
+    "スタイルを教えてください。ワードローブに合わせて提案します。",
+    "あなたのスタイルに合うコーディネートのアイデアが欲しいですか？",
+    "すでに持っているアイテムでコーディネートを組み立てるお手伝いができます。",
+  ],
+  ko: [
+    "완벽한 스타일을 찾는 데 도와드릴까요?",
+    "오늘 새롭게 스타일을 바꾸고 싶나요? 제가 도와드릴게요.",
+    "취향을 알려주세요. 옷장에 맞춰 조합해드릴게요.",
+    "당신의 스타일에 맞는 추천을 원하시나요?",
+    "이미 가지고 있는 아이템으로 스타일을 구성해드릴 수 있어요.",
+  ],
+};
 
 export default function ChatBox({
   messages,
@@ -48,6 +120,7 @@ export default function ChatBox({
   const [welcomeIndex, setWelcomeIndex] = useState(0);
   const [typedWelcome, setTypedWelcome] = useState("");
   const [profileName, setProfileName] = useState("");
+  const [lang, setLang] = useState("id");
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -102,17 +175,37 @@ export default function ChatBox({
       .then((response) => (response.ok ? response.json() : null))
       .then((profile) => {
         if (profile?.displayName) setProfileName(profile.displayName);
+        if (profile?.language) setLang(profile.language);
       })
       .catch(() => undefined)
       .finally(() => setIsProfileLoaded(true));
   }, []);
 
   useEffect(() => {
+    const handleLanguageEvent = (event: Event) => {
+      const nextLanguage = (event as CustomEvent<string>).detail;
+      if (nextLanguage) setLang(nextLanguage);
+    };
+
+    window.addEventListener("language-change", handleLanguageEvent);
+    return () => window.removeEventListener("language-change", handleLanguageEvent);
+  }, []);
+
+  useEffect(() => {
     if (!isEmpty || !isProfileLoaded) return;
 
+    const messages = welcomeMessagesByLanguage[lang] ?? welcomeMessagesByLanguage.en;
     const currentPhrase = profileName
-      ? `Hi ${profileName}, ${welcomeMessages[welcomeIndex]}`
-      : welcomeMessages[welcomeIndex];
+      ? lang === "id"
+        ? `Hai ${profileName}, ${messages[welcomeIndex]}`
+        : lang === "es"
+          ? `Hola ${profileName}, ${messages[welcomeIndex]}`
+          : lang === "zh"
+            ? `${profileName}，${messages[welcomeIndex]}`
+            : lang === "ar"
+              ? `${profileName}، ${messages[welcomeIndex]}`
+              : `Hi ${profileName}, ${messages[welcomeIndex]}`
+      : messages[welcomeIndex];
     let charIndex = 0;
     setTypedWelcome("");
 
@@ -127,7 +220,7 @@ export default function ChatBox({
 
     const timeoutId = window.setTimeout(
       () => {
-        setWelcomeIndex((prev) => (prev + 1) % welcomeMessages.length);
+        setWelcomeIndex((prev) => (prev + 1) % messages.length);
       },
       currentPhrase.length * 45 + 1200,
     );
@@ -136,7 +229,7 @@ export default function ChatBox({
       clearInterval(intervalId);
       clearTimeout(timeoutId);
     };
-  }, [isEmpty, isProfileLoaded, profileName, welcomeIndex]);
+  }, [isEmpty, isProfileLoaded, lang, profileName, welcomeIndex]);
 
   const saveOutfit = async (
     messageKey: string,
@@ -192,8 +285,9 @@ export default function ChatBox({
             </div>
 
             <p className="mt-4 text-sm leading-relaxed text-neutral-400">
-              Tell me your mood, occasion, or the look you want to pull
-              together.
+              {lang === "id"
+                ? "Ceritakan suasana, momen, atau tampilan yang ingin kamu padukan."
+                : "Tell me your mood, occasion, or the look you want to pull together."}
             </p>
           </div>
         </div>

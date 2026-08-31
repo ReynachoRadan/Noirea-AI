@@ -13,6 +13,20 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
 
+  const createNewSession = async () => {
+    try {
+      const res = await fetch("/api/sessions", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to create session");
+      const newSession: ChatSession = await res.json();
+      setSessions((prev) => [newSession, ...prev]);
+      setSelectedSessionId(newSession.id);
+      return newSession;
+    } catch (error) {
+      console.error("Failed to create session:", error);
+      return null;
+    }
+  };
+
   const fetchSessions = async () => {
     try {
       const res = await fetch("/api/sessions");
@@ -37,35 +51,49 @@ export default function Page() {
   const getCurrentSession = () =>
     sessions.find((s) => s.id === selectedSessionId);
 
+  const getAutoSessionTitle = (value: string) => {
+    const cleanValue = value.replace(/\s+/g, " ").trim();
+    return cleanValue.length > 40
+      ? `${cleanValue.slice(0, 40).trim()}...`
+      : cleanValue;
+  };
+
   const handleSend = async (text: string) => {
-    if (!selectedSessionId) return;
+    let targetSessionId = selectedSessionId;
 
-    const session = sessions.find((s) => s.id === selectedSessionId);
-
-    // Auto-generate judul dari pesan pertama, kalau nama masih default
-    if (
-      session &&
-      session.name === "New Chat" &&
-      session.messages.length === 0
-    ) {
-      const autoTitle =
-        text.length > 40 ? text.slice(0, 40).trim() + "..." : text;
-      handleRenameSession(selectedSessionId, autoTitle);
+    if (!targetSessionId) {
+      const newSession = await createNewSession();
+      if (!newSession) return;
+      targetSessionId = newSession.id;
     }
 
-    // Optimistic update: tampilkan pesan user duluan sebelum AI balas
-    const optimisticMessage: Message = { type: "user", text };
+    const session = sessions.find((s) => s.id === targetSessionId);
+    const shouldAutoRename =
+      !session ||
+      (session.name === "New Chat" && session.messages.length === 0);
+
+    if (shouldAutoRename && targetSessionId) {
+      const autoTitle = getAutoSessionTitle(text);
+      await handleRenameSession(targetSessionId, autoTitle);
+    }
+
+    const optimisticMessage: Message = {
+      id: `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      type: "user",
+      text,
+    };
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === selectedSessionId
+        s.id === targetSessionId
           ? { ...s, messages: [...s.messages, optimisticMessage] }
           : s,
       ),
     );
+    setSelectedSessionId(targetSessionId);
     setIsLoading(true);
 
     try {
-      const res = await fetch(`/api/sessions/${selectedSessionId}/messages`, {
+      const res = await fetch(`/api/sessions/${targetSessionId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
@@ -76,7 +104,7 @@ export default function Page() {
 
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === selectedSessionId
+          s.id === targetSessionId
             ? {
                 ...s,
                 messages: [
@@ -99,15 +127,7 @@ export default function Page() {
   };
 
   const handleCreateSession = async () => {
-    try {
-      const res = await fetch("/api/sessions", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to create session");
-      const newSession: ChatSession = await res.json();
-      setSessions((prev) => [newSession, ...prev]);
-      setSelectedSessionId(newSession.id);
-    } catch (error) {
-      console.error("Failed to create session:", error);
-    }
+    await createNewSession();
   };
 
   const handleDeleteSession = async (id: string) => {
@@ -145,22 +165,24 @@ export default function Page() {
     const session = sessions.find((s) => s.id === selectedSessionId);
     if (!session) return;
 
-    // Perlu message id asli dari database — messages di state React
-    // sudah termasuk field 'id' karena datang langsung dari API (lihat catatan di bawah)
     const targetMessage = session.messages[index] as Message & { id?: string };
-    if (!targetMessage?.id) {
-      console.error("Message id not found, cannot edit");
-      return;
-    }
-
     const trimmedMessages = session.messages.slice(0, index + 1);
-    trimmedMessages[index] = { ...trimmedMessages[index], text: newText };
+    trimmedMessages[index] = {
+      ...trimmedMessages[index],
+      text: newText,
+      id: trimmedMessages[index]?.id ?? `local-${Date.now()}-${index}`,
+    };
 
     setSessions((prev) =>
       prev.map((s) =>
         s.id === selectedSessionId ? { ...s, messages: trimmedMessages } : s,
       ),
     );
+
+    if (!targetMessage?.id) {
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -220,17 +242,13 @@ export default function Page() {
             <div className="flex items-center justify-center h-full text-neutral-500 text-sm">
               Memuat percakapan...
             </div>
-          ) : currentSession ? (
+          ) : (
             <ChatBox
               messages={currentSession?.messages ?? []}
               onSend={handleSend}
               isLoading={isLoading}
               onEdit={handleEditMessage}
             />
-          ) : (
-            <div className="flex h-full items-center justify-center text-neutral-500 text-sm">
-              No session selected.
-            </div>
           )}
         </div>
       </main>

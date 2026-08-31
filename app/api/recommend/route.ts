@@ -39,43 +39,82 @@ function scoreWardrobeItem(item: WardrobeItemLike, prompt: string) {
   let score = 0;
 
   const categoryPriority: Record<string, number> = {
-    top: 10,
-    bottom: 10,
-    shoes: 8,
-    outerwear: 7,
-    accessory: 5,
+    top: 12,
+    bottom: 12,
+    shoes: 10,
+    outerwear: 8,
+    accessory: 6,
   };
 
   score += categoryPriority[item.category] ?? 0;
 
-  const styleHints = {
-    casual: ["casual", "daily", "jalan", "sore", "weekend", "hangout"],
-    formal: ["formal", "office", "meeting", "event", "elegant", "work"],
-    sporty: ["sporty", "gym", "run", "active", "fit"],
-    night: ["night", "malam", "party", "dinner", "date"],
-    vacation: ["vacation", "travel", "holiday", "beach", "outdoor"],
-    cozy: ["cozy", "winter", "rainy", "hangout", "relaxed"],
+  const textureBoost = ["cotton", "linen", "denim", "leather", "knit", "silk"]
+    .some((keyword) => itemText.includes(keyword))
+    ? 2
+    : 0;
+  score += textureBoost;
+
+  const styleHints: Record<string, string[]> = {
+    casual: ["casual", "daily", "jalan", "sore", "weekend", "hangout", "streetwear"],
+    formal: ["formal", "office", "meeting", "event", "elegant", "work", "smart"],
+    sporty: ["sporty", "gym", "run", "active", "fit", "athleisure"],
+    night: ["night", "malam", "party", "dinner", "date", "going out"],
+    vacation: ["vacation", "travel", "holiday", "beach", "outdoor", "trip"],
+    cozy: ["cozy", "winter", "rainy", "relaxed", "comfort"],
   };
 
   for (const [style, words] of Object.entries(styleHints)) {
     if (words.some((word) => normalizedPrompt.includes(word))) {
       score += style === "casual" ? 5 : 4;
+      if (item.category === "top" && ["casual", "cozy", "night"].includes(style)) score += 2;
+      if (item.category === "bottom" && style === "formal") score += 2;
+      if (item.category === "shoes" && ["night", "formal", "casual"].includes(style)) score += 2;
     }
   }
 
   for (const token of promptTokens) {
-    if (itemText.includes(token)) {
-      score += 2;
+    if (!token || token.length < 2) continue;
+    if (itemText.includes(token)) score += 3;
+    if (item.name.toLowerCase().includes(token)) score += 2;
+  }
+
+  const colorWeights: Record<string, number> = {
+    black: 2,
+    white: 2,
+    navy: 2,
+    blue: 2,
+    brown: 2,
+    beige: 2,
+    cream: 2,
+    grey: 1,
+    gray: 1,
+    green: 1,
+    red: 1,
+    yellow: 1,
+    pink: 1,
+  };
+
+  const colorNames = Object.keys(colorWeights);
+  for (const colorName of colorNames) {
+    if (normalizedPrompt.includes(colorName) && itemText.includes(colorName)) {
+      score += colorWeights[colorName];
     }
   }
 
   if (normalizedPrompt.includes(item.category)) {
-    score += 3;
+    score += 4;
   }
+
+  if (normalizedPrompt.includes("top") && item.category === "top") score += 3;
+  if (normalizedPrompt.includes("bottom") && item.category === "bottom") score += 3;
+  if (normalizedPrompt.includes("shoes") && item.category === "shoes") score += 3;
 
   if (normalizedPrompt.includes(item.color)) {
     score += 2;
   }
+
+  const neutralBonus = /black|white|beige|navy|grey|gray|brown/.test(item.color.toLowerCase()) ? 2 : 0;
+  score += neutralBonus;
 
   return score;
 }
@@ -90,20 +129,31 @@ function pickBestWardrobeSubset<T extends WardrobeItemLike>(
     .map((item) => ({ item, score: scoreWardrobeItem(item, prompt) }))
     .sort((a, b) => b.score - a.score);
 
-  const targetCount = Math.min(5, Math.max(2, Math.min(wardrobe.length, 4)));
+  const categoryOrder = ["top", "bottom", "shoes", "outerwear", "accessory"];
   const selected: T[] = [];
   const seenCategories = new Set<string>();
 
+  for (const category of categoryOrder) {
+    const best = scored.find(
+      ({ item }) => item.category === category && !seenCategories.has(item.category),
+    );
+
+    if (best) {
+      selected.push(best.item);
+      seenCategories.add(best.item.category);
+    }
+  }
+
   for (const { item } of scored) {
-    if (!seenCategories.has(item.category) || selected.length < 2) {
+    if (!seenCategories.has(item.category)) {
       selected.push(item);
       seenCategories.add(item.category);
     }
 
-    if (selected.length >= targetCount) break;
+    if (selected.length >= 5) break;
   }
 
-  if (selected.length >= 2) return selected;
+  if (selected.length >= 2) return selected.slice(0, 5);
   return scored.slice(0, Math.min(2, scored.length)).map(({ item }) => item);
 }
 
@@ -126,7 +176,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const wardrobe = await prisma.wardrobeItem.findMany({
+    const wardrobe: Awaited<
+      ReturnType<typeof prisma.wardrobeItem.findMany>
+    > = await prisma.wardrobeItem.findMany({
       where: { userId: user.id },
     });
 
@@ -143,8 +195,10 @@ export async function POST(req: NextRequest) {
     const selectedItemIds = Array.isArray(itemIds)
       ? itemIds.filter((id: unknown): id is string => typeof id === "string")
       : [];
-    const candidateItems = selectedItemIds.length
-      ? wardrobe.filter((item) => selectedItemIds.includes(item.id))
+    const candidateItems: Array<(typeof wardrobe)[number]> = selectedItemIds.length
+      ? wardrobe.filter((item: (typeof wardrobe)[number]) =>
+          selectedItemIds.includes(item.id),
+        )
       : pickBestWardrobeSubset(wardrobe, prompt);
 
     if (selectedItemIds.length > 0 && candidateItems.length < 2) {
@@ -170,7 +224,7 @@ export async function POST(req: NextRequest) {
         : "Preferensi personal user: belum diisi";
     const wardrobeContext = candidateItems
       .map(
-        (item) =>
+        (item: (typeof candidateItems)[number]) =>
           `- id: ${item.id}, name: ${item.name}, category: ${item.category}, color: ${item.color}`,
       )
       .join("\n");
@@ -190,22 +244,30 @@ Rules:
 - Only use item ids from the wardrobe list provided.
 - Prefer the most fitting subset, not every item.
 - Keep the outfit balanced and realistic.
+- Favor one strong item from each essential category when available: top, bottom, shoes, and accessory/outerwear.
+- Avoid stacking multiple items from the same category unless the wardrobe is limited.
 - Respect the user's personal preferences when they do not conflict with the request.
 - Respond in ${responseLanguage}.`;
 
     const userPrompt = `${profileContext}\n\nWardrobe yang paling relevan:\n${wardrobeContext}\n\nPermintaan: ${prompt}`;
 
     const rawResponse = await callGroqStructured(systemPrompt, userPrompt);
-    const parsed = JSON.parse(rawResponse);
+    const parsed = JSON.parse(rawResponse) as {
+      summary?: string;
+      reasoning?: string;
+      itemIds?: unknown[];
+    };
 
-    const validIds = new Set(candidateItems.map((item) => item.id));
+    const validIds = new Set(
+      candidateItems.map((item: (typeof candidateItems)[number]) => item.id),
+    );
     const requestedIds = Array.isArray(parsed.itemIds)
       ? parsed.itemIds.filter(
           (id: unknown) => typeof id === "string" && validIds.has(id),
         )
       : [];
 
-    let recommendedItems = wardrobe.filter((item) =>
+    let recommendedItems = wardrobe.filter((item: (typeof wardrobe)[number]) =>
       requestedIds.includes(item.id),
     );
 
@@ -228,7 +290,9 @@ Rules:
     return NextResponse.json({
       summary:
         parsed.summary ||
-        `Outfit ${recommendedItems.map((item) => item.name).join(", ")} paling sesuai untuk permintaanmu.`,
+        `Outfit ${recommendedItems
+          .map((item: (typeof recommendedItems)[number]) => item.name)
+          .join(", ")} paling sesuai untuk permintaanmu.`,
       items: recommendedItems,
       reasoning:
         parsed.reasoning ||
