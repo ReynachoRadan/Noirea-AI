@@ -214,11 +214,11 @@ Not yet deployed. A future target is Vercel with Supabase PostgreSQL, Supabase S
 - [x] Personal style profile
 - [x] Mix & Match tool
 - [x] Automated API testing
-- [ ] Production deployment
+- [X] Production deployment
 
 ## Screenshots
+![alt text](image.png)
 
-_Coming soon._
 
 ## Author
 
