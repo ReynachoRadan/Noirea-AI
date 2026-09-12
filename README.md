@@ -149,11 +149,21 @@ DATABASE_URL=your_postgres_connection_string
 DIRECT_URL=your_postgres_direct_connection_string
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# Production URL, without a trailing slash (for example https://app.example.com)
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-For password reset emails, add `http://localhost:3000/auth/callback` to the
-Supabase Auth URL Configuration allow list. Add the production callback URL as
-well when deploying.
+For password reset emails, set `NEXT_PUBLIC_SITE_URL` to the deployed app URL in
+the hosting provider's environment variables, then redeploy. In Supabase
+Dashboard, open **Authentication → URL Configuration** and set **Site URL** to
+the same production URL. Add the following to **Redirect URLs**:
+
+- `http://localhost:3000/auth/callback` for local development
+- `https://your-production-domain.com/auth/callback` for production
+
+If you use a custom domain, use that domain instead of the hosting provider's
+temporary URL. The URL must match the deployed app exactly, including the
+protocol and path.
 
 Create a public Storage bucket named `wardrobe-images`, then add these policies in the Supabase SQL editor:
 
