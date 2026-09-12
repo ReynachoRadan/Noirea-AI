@@ -10,7 +10,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,7 +20,13 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      if (mode === "login") {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        });
+        if (error) throw error;
+        setError("Jika email terdaftar, tautan untuk membuat sandi baru sudah dikirim.");
+      } else if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -60,7 +66,11 @@ export default function LoginPage() {
           className="flex flex-col gap-3 p-6 rounded-xl border border-neutral-800 bg-neutral-900"
         >
           <h2 className="text-sm font-medium mb-2">
-            {mode === "login" ? "Masuk" : "Buat akun"}
+            {mode === "login"
+              ? "Masuk"
+              : mode === "signup"
+                ? "Buat akun"
+                : "Rubah sandi"}
           </h2>
 
           <input
@@ -71,15 +81,17 @@ export default function LoginPage() {
             required
             className="bg-neutral-800 rounded-lg px-3 py-2 text-sm outline-none"
           />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="bg-neutral-800 rounded-lg px-3 py-2 text-sm outline-none"
-          />
+          {mode !== "forgot" && (
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="bg-neutral-800 rounded-lg px-3 py-2 text-sm outline-none"
+            />
+          )}
 
           {error && <p className="text-xs text-red-400">{error}</p>}
 
@@ -88,21 +100,53 @@ export default function LoginPage() {
             disabled={isLoading}
             className="mt-2 px-4 py-2 rounded-lg bg-white text-black text-sm font-medium hover:bg-neutral-200 transition disabled:opacity-50"
           >
-            {isLoading ? "Memproses..." : mode === "login" ? "Masuk" : "Daftar"}
+            {isLoading
+              ? "Memproses..."
+              : mode === "login"
+                ? "Masuk"
+                : mode === "signup"
+                  ? "Daftar"
+                  : "Kirim tautan reset"}
           </button>
+
+          {mode === "login" && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode("forgot");
+                setError(null);
+              }}
+              className="text-xs text-neutral-400 hover:text-white transition mt-1"
+            >
+              Lupa sandi?
+            </button>
+          )}
 
           <button
             type="button"
             onClick={() => {
-              setMode(mode === "login" ? "signup" : "login");
+              setMode(mode === "signup" ? "login" : "signup");
               setError(null);
             }}
             className="text-xs text-neutral-400 hover:text-white transition mt-1"
           >
-            {mode === "login"
-              ? "Belum punya akun? Daftar"
-              : "Sudah punya akun? Masuk"}
+            {mode === "signup"
+              ? "Sudah punya akun? Masuk"
+              : "Belum punya akun? Daftar"}
           </button>
+
+          {mode === "forgot" && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode("login");
+                setError(null);
+              }}
+              className="text-xs text-neutral-400 hover:text-white transition"
+            >
+              Kembali ke masuk
+            </button>
+          )}
         </form>
       </div>
     </div>

@@ -31,6 +31,9 @@ export async function middleware(request: NextRequest) {
 
   const isApiRoute = request.nextUrl.pathname.startsWith("/api");
   const isAuthPage = request.nextUrl.pathname.startsWith("/login");
+  const isPasswordResetRoute =
+    request.nextUrl.pathname.startsWith("/auth/callback") ||
+    request.nextUrl.pathname.startsWith("/reset-password");
 
   // Belum login, akses API route → 401 JSON (bukan redirect HTML)
   if (!user && isApiRoute) {
@@ -38,7 +41,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Belum login, coba akses halaman selain /login → redirect ke /login
-  if (!user && !isAuthPage && !isApiRoute) {
+  if (!user && !isAuthPage && !isPasswordResetRoute && !isApiRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

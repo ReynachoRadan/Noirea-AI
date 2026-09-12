@@ -25,6 +25,7 @@ NOIRÉA lets users log their own wardrobe items and asks an AI stylist for outfi
 - Style assistant chat (Groq-powered LLM, server-side)
 - Chat sessions — create, rename, delete, edit messages (with automatic AI re-response)
 - Supabase authentication with user ownership checks on API routes
+- Password reset via email from the login page
 - Prisma/PostgreSQL persistence for chat sessions, messages, and wardrobe items
 - Wardrobe management — add, view, and delete clothing items (name, category, color, image)
 - AI outfit recommendations grounded in the authenticated user's wardrobe
@@ -149,6 +150,10 @@ DIRECT_URL=your_postgres_direct_connection_string
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
+
+For password reset emails, add `http://localhost:3000/auth/callback` to the
+Supabase Auth URL Configuration allow list. Add the production callback URL as
+well when deploying.
 
 Create a public Storage bucket named `wardrobe-images`, then add these policies in the Supabase SQL editor:
 
