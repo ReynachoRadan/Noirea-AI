@@ -2,7 +2,7 @@
 
 AI-powered personal wardrobe and outfit recommendation platform.
 
-> 🚧 **Status as of 2026-08-28:** Core chat, authentication, wardrobe management, AI recommendations, image analysis, saved outfits, Supabase Storage, personalized profiles, and Mix & Match are implemented and validated. Production deployment remains next.
+> **Status as of 2026-09-13:** NOIRÉA is deployed on Vercel. Core chat, authentication, wardrobe management, AI recommendations, image analysis, saved outfits, Supabase Storage, personalized profiles, and Mix & Match are implemented and validated.
 
 ---
 
@@ -38,9 +38,9 @@ NOIRÉA lets users log their own wardrobe items and asks an AI stylist for outfi
 - Mix & Match results modal with detailed reasoning, color, proportion, and occasion analysis
 - Save generated Mix & Match outfits to Saved Looks or edit the selected items
 
-**Planned:**
+**In progress:**
 
-- Production deployment
+- Production hardening, including the remaining database security configuration and browser end-to-end coverage
 
 ## Architecture
 
@@ -126,7 +126,7 @@ Wardrobe items, chat sessions, messages, and saved outfits persist in PostgreSQL
 **Prerequisites:** Node.js 18+, PostgreSQL database, Supabase project, and a [Groq API key](https://console.groq.com/keys)
 
 ```bash
-git clone https://github.com/<your-username>/Noirea-AI.git
+git clone https://github.com/ReynachoRadan/Noirea-AI.git
 cd Noirea-AI
 npm install
 ```
@@ -205,14 +205,20 @@ Automated API testing is active. Browser end-to-end testing remains manual for n
 
 ## Deployment
 
-Not yet deployed. A future target is Vercel with Supabase PostgreSQL, Supabase Storage, and production environment variables.
+The production app is deployed on Vercel:
+
+- **Live app:** [noirea-ai.vercel.app](https://noirea-ai.vercel.app)
+- **Repository:** [ReynachoRadan/Noirea-AI](https://github.com/ReynachoRadan/Noirea-AI)
+- **Default branch:** `main`
+
+The deployment uses Supabase Authentication, Supabase Storage, PostgreSQL through Prisma, and the production environment variables listed above. Set `NEXT_PUBLIC_SITE_URL` to the live app URL in Vercel and configure the same URL in Supabase Authentication before testing password reset in production.
 
 ## Technical Decisions
 
 - **API key handling:** All LLM calls go through a server-side API route (`app/api/chat/route.ts`) rather than calling Groq directly from the client, to keep the API key out of the browser bundle.
 - **Prototype-first persistence:** the initial localStorage prototype was migrated to Prisma/PostgreSQL once the domain model was validated.
 - **Domain types over generic chat types:** `types/` was restructured so fashion-domain models (wardrobe, outfit, AI recommendation) are first-class, rather than treating the app as a generic chat client with a fashion-themed system prompt.
-- **Incremental refactor:** Rather than a full rewrite, the existing chat-app foundation is being evolved feature-by-feature (see commit history on `feat/noirea-v2`), keeping the app runnable at every step.
+- **Incremental refactor:** Rather than a full rewrite, the existing chat-app foundation is being evolved feature-by-feature, keeping the app runnable at every step.
 
 ## Roadmap
 
@@ -229,10 +235,7 @@ Not yet deployed. A future target is Vercel with Supabase PostgreSQL, Supabase S
 - [x] Personal style profile
 - [x] Mix & Match tool
 - [x] Automated API testing
-- [X] Production deployment
-
-## Screenshots
-![alt text](image.png)
+- [x] Production deployment
 
 
 ## Author
